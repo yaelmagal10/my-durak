@@ -1,13 +1,14 @@
 import os
 import uuid
 import importlib.util
+import sys
 from fastapi import FastAPI, UploadFile, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from pydantic import BaseModel
 import random
-from game_logic import advance_game_step  # Import the helper
+from durak_game import advance_game_step  # Import the helper
 
 app = FastAPI()
 app.add_middleware(
@@ -54,6 +55,10 @@ def deal_players(deck, num_players):
 
 
 def load_bot(filepath):
+    # Ensure backend dir is in sys.path for bot imports
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
     spec = importlib.util.spec_from_file_location("bot", filepath)
     bot = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(bot)
@@ -96,32 +101,32 @@ async def create_game(request: Request):
     for fname in bot_filenames:
         bot_path = os.path.join(BOTS_DIR, fname)
         bots.append(load_bot(bot_path))
-        # Use the uploaded name (strip uuid and .py)
         bot_names.append(fname.split("_", 1)[-1].replace(".py", ""))
+    # Find attacker: player with the lowest trump card (lowest rank of trump suit)
+    lowest_trump = 20
     attacker = 0
-    defender = 1
-    table = []
-    # First attack
-    attack_card = bots[attacker].attack(
-        [dict(card) for card in hands[attacker]], [], trump_suit
-    )
-    table.append(attack_card)
-    # Remove attack card from attacker's hand
-    for idx, c in enumerate(hands[attacker]):
-        if c["rank"] == attack_card["rank"] and c["suit"] == attack_card["suit"]:
-            hands[attacker].pop(idx)
-            break
+    trump_rank_order = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+    for i, hand in enumerate(hands):
+        trump_cards = [
+            trump_rank_order.index(c["rank"]) for c in hand if c["suit"] == trump_suit
+        ]
+        if trump_cards:
+            min_trump = min(trump_cards)
+            if min_trump < lowest_trump:
+                lowest_trump = min_trump
+                attacker = i
+    defender = (attacker + 1) % len(bots)
     state = {
         "trump_suit": trump_suit,
         "trump_card": trump_card,
         "hands": [[f"{c['rank']}{c['suit']}" for c in h] for h in hands],
-        "table": [f"{attack_card['rank']}{attack_card['suit']}"],
+        "table_attack": [],
+        "table_defence": [],
         "attacker": attacker,
         "defender": defender,
-        "log": [
-            f"Trump: {trump_card['rank']}{trump_card['suit']}",
-            f"Player {attacker+1} ({bot_names[attacker]}) attacks with {attack_card['rank']}{attack_card['suit']}",
-        ],
+        "log": [],
+        "bot_states": [{} for _ in bots],
+        "burn": False,
     }
     game_id = uuid.uuid4().hex
     GAMES[game_id] = {"bots": bot_filenames, "bot_names": bot_names, "state": state}

@@ -25,9 +25,19 @@
   - The backend supports uploading and listing bots, and running games with any combination of uploaded bots.
 
 - **Bot Interface:**  
-  - Each bot must be a Python file with two functions:
-    - `attack(hand, table, trump_suit) -> card or None`
-    - `defend(hand, attack_card, trump_suit) -> card or None`
+  - Each bot must be a Python file with a function:
+    - `def bot(input_data: dict) -> dict`
+      - `input_data` contains:
+        - `"action"`: `"attack"` or `"defend"`
+        - `"hand"`: list of card dicts
+        - `"table"` or `"attack_card"`: cards on table or card to defend against
+        - `"trump_suit"`: str
+        - `"bot_state"`: dict (optional, for persistent state)
+      - Return a dict:
+        - `"action"`: action string
+        - `"card"`: card dict or None
+        - `"bot_state"`: dict (state to save for next turn)
+  - For compatibility, you may also provide `attack` and `defend` wrappers.
   - Example bot: `backend/example_bot.py`
 
 - **Frontend:**  
@@ -38,19 +48,26 @@
 1. **Write a Python file with the following interface:**
     ```python
     # my_bot.py
-    def attack(hand, table, trump_suit):
-        # hand: list of {"rank": str, "suit": str}
-        # table: list of cards on table
-        # trump_suit: str
-        # Return a card dict {"rank": str, "suit": str} or None
+    def bot(input_data):
+        # input_data: dict with keys "action", "hand", "table"/"attack_card", "trump_suit", "bot_state"
+        # Return a dict: {"action": ..., "card": ..., "bot_state": ...}
         pass
 
-    def defend(hand, attack_card, trump_suit):
-        # hand: list of {"rank": str, "suit": str}
-        # attack_card: {"rank": str, "suit": str}
-        # trump_suit: str
-        # Return a card dict {"rank": str, "suit": str} or None
-        pass
+    # Optionally, for compatibility:
+    attack = lambda hand, table, trump_suit, bot_state=None: bot({
+        "action": "attack",
+        "hand": hand,
+        "table": table,
+        "trump_suit": trump_suit,
+        "bot_state": bot_state or {},
+    })
+    defend = lambda hand, attack_card, trump_suit, bot_state=None: bot({
+        "action": "defend",
+        "hand": hand,
+        "attack_card": attack_card,
+        "trump_suit": trump_suit,
+        "bot_state": bot_state or {},
+    })
     ```
 
 2. **Upload the bot using the web interface.**

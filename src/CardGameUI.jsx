@@ -1,7 +1,7 @@
 import React from "react";
 
-// CardGameUI expects props: hands, table, log, attacker, defender, bots, compact
-export default function CardGameUI({ hands, table, log, attacker, defender, bots, compact }) {
+// CardGameUI expects props: hands, table_attack, table_defence, log, attacker, defender, bots, compact
+export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact }) {
     const pad = compact ? 10 : 32;
     const cardPad = compact ? "6px 8px" : "16px 18px";
     const cardFont = compact ? 16 : 24;
@@ -14,6 +14,44 @@ export default function CardGameUI({ hands, table, log, attacker, defender, bots
     const tableFont = compact ? 15 : 22;
     const minTableWidth = compact ? 40 : 80;
     const maxHandBoxHeight = compact ? 170 : undefined;
+
+    // Helper to display attack/defence pairs
+    function renderTablePairs(table_attack, table_defence) {
+        const pairs = [];
+        const maxLen = Math.max(table_attack?.length || 0, table_defence?.length || 0);
+        for (let i = 0; i < maxLen; ++i) {
+            const attack = table_attack && table_attack[i] ? table_attack[i] : null;
+            const defend = table_defence && table_defence[i] ? table_defence[i] : null;
+            pairs.push(
+                <div key={i} style={{ display: "flex", alignItems: "center", marginBottom: 2 }}>
+                    <span style={{
+                        minWidth: 32,
+                        minHeight: 24,
+                        padding: "2px 8px",
+                        background: attack ? "#fbbf24" : "transparent",
+                        borderRadius: 5,
+                        marginRight: 6,
+                        fontWeight: 600,
+                        color: "#b45309"
+                    }}>
+                        {attack || ""}
+                    </span>
+                    <span style={{
+                        minWidth: 32,
+                        minHeight: 24,
+                        padding: "2px 8px",
+                        background: defend ? "#60a5fa" : "transparent",
+                        borderRadius: 5,
+                        fontWeight: 600,
+                        color: "#1e40af"
+                    }}>
+                        {defend || ""}
+                    </span>
+                </div>
+            );
+        }
+        return pairs;
+    }
 
     return (
         <div
@@ -131,15 +169,14 @@ export default function CardGameUI({ hands, table, log, attacker, defender, bots
                             fontSize: tableFont,
                             marginBottom: compact ? 6 : 16,
                             display: "flex",
+                            flexDirection: "column",
                             gap: compact ? 2 : 8,
-                            flexWrap: "wrap",
+                            flexWrap: "nowrap",
                             justifyContent: "center",
                         }}
                     >
-                        {table && table.length > 0
-                            ? table.map((card, idx) => (
-                                <span key={idx} style={{ margin: 2 }}>{card}</span>
-                            ))
+                        {table_attack && table_attack.length > 0
+                            ? renderTablePairs(table_attack, table_defence)
                             : <span style={{ color: "#a1a1aa" }}>No cards</span>
                         }
                     </div>
