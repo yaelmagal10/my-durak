@@ -2,6 +2,12 @@ import os
 import uuid
 import importlib.util
 import sys
+
+# Add this before importing durak_game
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 from fastapi import FastAPI, UploadFile, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,9 +66,11 @@ def load_bot(filepath):
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
     spec = importlib.util.spec_from_file_location("bot", filepath)
-    bot = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(bot)
-    return bot
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    # Try to get 'bot' instance, else fallback to module
+    bot_instance = getattr(module, "bot", module)
+    return bot_instance
 
 
 @app.post("/api/bots")
@@ -100,8 +108,13 @@ async def create_game(request: Request):
     bot_names = []
     for fname in bot_filenames:
         bot_path = os.path.join(BOTS_DIR, fname)
-        bots.append(load_bot(bot_path))
-        bot_names.append(fname.split("_", 1)[-1].replace(".py", ""))
+        bot_instance = load_bot(bot_path)
+        bots.append(bot_instance)
+        # Use bot.name if available, else fallback to filename
+        bot_name = getattr(
+            bot_instance, "name", fname.split("_", 1)[-1].replace(".py", "")
+        )
+        bot_names.append(bot_name)
     # Find attacker: player with the lowest trump card (lowest rank of trump suit)
     lowest_trump = 20
     attacker = 0
@@ -124,9 +137,10 @@ async def create_game(request: Request):
         "table_defence": [],
         "attacker": attacker,
         "defender": defender,
-        "log": [],
+        "log": [[] for _ in bots],  # log is now a list of lists, one per bot
         "bot_states": [{} for _ in bots],
         "burn": False,
+        "deck_count": len(deck),  # Add deck count to state
     }
     game_id = uuid.uuid4().hex
     GAMES[game_id] = {"bots": bot_filenames, "bot_names": bot_names, "state": state}

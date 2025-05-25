@@ -1,7 +1,7 @@
 import React from "react";
 
-// CardGameUI expects props: hands, table_attack, table_defence, log, attacker, defender, bots, compact
-export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact }) {
+// CardGameUI expects props: hands, table_attack, table_defence, log, attacker, defender, bots, compact, status
+export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact, status }) {
     const pad = compact ? 10 : 32;
     const cardPad = compact ? "6px 8px" : "16px 18px";
     const cardFont = compact ? 16 : 24;
@@ -14,6 +14,9 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
     const tableFont = compact ? 15 : 22;
     const minTableWidth = compact ? 40 : 80;
     const maxHandBoxHeight = compact ? 170 : undefined;
+
+    // Accept deck_count from props (passed via ...gameState.state)
+    const deckCount = arguments[0].deck_count ?? 0;
 
     // Helper to display attack/defence pairs
     function renderTablePairs(table_attack, table_defence) {
@@ -52,6 +55,27 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
         }
         return pairs;
     }
+
+    // Flatten all bot logs into a single array for the game log (with bot/player info)
+    function getGameLog(log, bots) {
+        if (!Array.isArray(log)) return [];
+        const entries = [];
+        log.forEach((botLog, idx) => {
+            if (Array.isArray(botLog)) {
+                botLog.forEach((entry, eidx) => {
+                    entries.push({
+                        player: idx,
+                        bot: bots && bots[idx] ? bots[idx] : `Player ${idx + 1}`,
+                        text: entry,
+                        order: eidx,
+                    });
+                });
+            }
+        });
+        return entries;
+    }
+
+    const gameLogEntries = getGameLog(log, bots);
 
     return (
         <div
@@ -107,6 +131,17 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             {attacker === idx && " (Attacker)"}
                             {defender === idx && " (Defender)"}
                         </h3>
+                        {/* Show status if available */}
+                        {status && status[idx] && (
+                            <div style={{
+                                color: "#0ea5e9",
+                                fontWeight: 500,
+                                fontSize: compact ? 11 : 15,
+                                marginBottom: compact ? 2 : 6,
+                            }}>
+                                Status: {status[idx]}
+                            </div>
+                        )}
                         <div style={{ display: "flex", gap: compact ? 4 : 12, marginBottom: compact ? 6 : 18 }}>
                             {hand.map((card, cidx) => (
                                 <div
@@ -158,6 +193,15 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                     >
                         Table
                     </h3>
+                    {/* Deck count display */}
+                    <div style={{
+                        marginBottom: compact ? 4 : 10,
+                        color: "#0f172a",
+                        fontWeight: 600,
+                        fontSize: compact ? 13 : 18,
+                    }}>
+                        Deck left: {deckCount}
+                    </div>
                     <div
                         style={{
                             background: "#f1f5f9",
@@ -180,16 +224,17 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             : <span style={{ color: "#a1a1aa" }}>No cards</span>
                         }
                     </div>
+                    {/* Game Log Box */}
                     <h3
                         style={{
                             fontWeight: 600,
                             fontSize: h3Font,
                             color: "#6366f1",
-                            marginBottom: compact ? 4 : 12,
+                            marginBottom: compact ? 4 : 8,
                             letterSpacing: 0.5,
                         }}
                     >
-                        Logs
+                        Game Log
                     </h3>
                     <div
                         style={{
@@ -203,10 +248,11 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             width: "100%",
                             boxSizing: "border-box",
                             boxShadow: compact ? "0 1px 2px #a5b4fc11" : "0 1px 4px #a5b4fc22",
+                            marginBottom: compact ? 6 : 12,
                         }}
                     >
-                        {log && log.length > 0
-                            ? log.slice().reverse().map((entry, idx) => (
+                        {gameLogEntries.length > 0
+                            ? gameLogEntries.slice().reverse().map((entry, idx) => (
                                 <div
                                     key={idx}
                                     style={{
@@ -215,7 +261,71 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                         fontWeight: idx === 0 ? 600 : 400,
                                     }}
                                 >
-                                    {entry}
+                                    <span style={{ color: "#6366f1", fontWeight: 600 }}>
+                                        {entry.bot}:
+                                    </span>{" "}
+                                    {entry.text}
+                                </div>
+                            ))
+                            : <div style={{ color: "#a1a1aa" }}>No log yet</div>
+                        }
+                    </div>
+                    {/* Bot Logs Box */}
+                    <h3
+                        style={{
+                            fontWeight: 600,
+                            fontSize: h3Font,
+                            color: "#6366f1",
+                            marginBottom: compact ? 4 : 8,
+                            letterSpacing: 0.5,
+                        }}
+                    >
+                        Bot Logs
+                    </h3>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: compact ? 6 : 18,
+                            width: "100%",
+                            marginBottom: compact ? 4 : 0,
+                        }}
+                    >
+                        {log && Array.isArray(log) && log.length > 0
+                            ? log.map((botLog, idx) => (
+                                <div
+                                    key={idx}
+                                    style={{
+                                        flex: 1,
+                                        background: "#f1f5f9",
+                                        border: "1px solid #e5e7eb",
+                                        borderRadius: 7,
+                                        height: logHeight,
+                                        overflowY: "auto",
+                                        padding: compact ? 4 : 12,
+                                        fontSize: compact ? 11 : 15,
+                                        boxSizing: "border-box",
+                                        boxShadow: compact ? "0 1px 2px #a5b4fc11" : "0 1px 4px #a5b4fc22",
+                                        minWidth: 0,
+                                    }}
+                                >
+                                    <div style={{ color: "#6366f1", fontWeight: 600, fontSize: compact ? 12 : 15, marginBottom: 4 }}>
+                                        Player {idx + 1} {bots && bots[idx] ? `(${bots[idx]})` : ""}
+                                    </div>
+                                    {botLog && botLog.length > 0
+                                        ? botLog.slice().reverse().map((entry, eidx) => (
+                                            <div
+                                                key={eidx}
+                                                style={{
+                                                    marginBottom: compact ? 2 : 6,
+                                                    color: "#475569",
+                                                    fontWeight: eidx === 0 ? 600 : 400,
+                                                }}
+                                            >
+                                                {entry}
+                                            </div>
+                                        ))
+                                        : <div style={{ color: "#a1a1aa" }}>No log yet</div>
+                                    }
                                 </div>
                             ))
                             : <div style={{ color: "#a1a1aa" }}>No log yet</div>

@@ -13,13 +13,21 @@ def rank_value(card):
 class ExampleBot:
     name = "ExampleBot"
 
-    def __call__(self, message, hand, table_or_attack_card, trump_suit, bot_state=None):
+    def __call__(self, message, state=None):
         # message: tuple(Input_actions)
-        # hand: list of (rank_index, suit_index)
-        # table_or_attack_card: list of cards (for attack) or a single card (for defend)
-        # trump_suit: int
-        # bot_state: dict (optional)
+        # state: optional dict
+        # For attack: message[0] in (Input_actions.FIRST_ATTACK, Input_actions.OPTIONAL_ATTACK)
+        # For defend: message[0] == Input_actions.DEFENCE
+        # The state is not used in this simple bot
+        if state is None:
+            state = {}
+        # For attack, expect: (Input_actions.FIRST_ATTACK,) or (Input_actions.OPTIONAL_ATTACK,)
+        # For defend, expect: (Input_actions.DEFENCE,)
         if message[0] in (Input_actions.FIRST_ATTACK, Input_actions.OPTIONAL_ATTACK):
+            # state should contain 'hand', 'table', 'trump_suit'
+            hand = state.get("hand", [])
+            table = state.get("table", [])
+            trump_suit = state.get("trump_suit", 0)
             if not hand:
                 return [Output_actions.PASS]
             non_trumps = [c for c in hand if c[1] != trump_suit]
@@ -29,7 +37,9 @@ class ExampleBot:
                 card = min(hand, key=rank_value)
             return [Output_actions.ATTACK, [card]]
         elif message[0] == Input_actions.DEFENCE:
-            attack_card = table_or_attack_card
+            hand = state.get("hand", [])
+            attack_card = state.get("attack_card", None)
+            trump_suit = state.get("trump_suit", 0)
             if attack_card is None or not hand:
                 return [Output_actions.TAKE]
             candidates = [
@@ -48,4 +58,5 @@ class ExampleBot:
             return [Output_actions.PASS]
 
 
+# Export the bot instance
 bot = ExampleBot()

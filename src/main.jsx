@@ -300,12 +300,15 @@ function GamePage({ onBack, selectedBots }) {
                 <>
                     <CardGameUI
                         hands={gameState.state.hands}
-                        table={gameState.state.table}
+                        table_attack={gameState.state.table_attack}
+                        table_defence={gameState.state.table_defence}
                         log={gameState.state.log}
                         attacker={gameState.state.attacker}
                         defender={gameState.state.defender}
                         bots={gameState.bots}
                         compact
+                        status={gameState.state.status}
+                        deck_count={gameState.state.deck_count}
                     />
                     <div style={{ marginTop: 12 }}>
                         {playMode === "step" && (
