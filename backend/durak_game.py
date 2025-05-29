@@ -5,17 +5,17 @@ CARDS_PER_HAND = 6
 STARTING_MAX_ATTACK_SIZE = 5
 MAX_ATTACK_SIZE_AFTER_BURN = 6
 RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+SUITS = ["♠", "♥", "♦", "♣"]
 
 
 def card_str_to_tuple(card_str):
-    suits = ["♠", "♥", "♦", "♣"]
     if len(card_str) == 3:
         rank = "10"
         suit = card_str[2]
     else:
         rank = card_str[0]
         suit = card_str[1]
-    return (RANKS.index(rank), suits.index(suit))
+    return (RANKS.index(rank), SUITS.index(suit))
 
 
 def inform(player, message, state=None):
@@ -32,9 +32,7 @@ def inform_all(player_list, message, states=None):
 
 
 def card_tuple_to_str(card_tuple):
-    ranks = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-    suits = ["♠", "♥", "♦", "♣"]
-    return f"{ranks[card_tuple[0]]}{suits[card_tuple[1]]}"
+    return f"{RANKS[card_tuple[0]]}{SUITS[card_tuple[1]]}"
 
 
 def hand_strs_to_tuples(hand):

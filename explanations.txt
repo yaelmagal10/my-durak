@@ -1,0 +1,55 @@
+# Project Structure and Running Instructions
+
+## Project Structure
+
+This project is a Durak card game implementation with both backend logic (Python) and a web-based frontend (JavaScript/React). Here is an overview of the main components:
+
+### Backend (`backend/`)
+- **durak_game.py**: Contains the main game logic, including card handling, player actions, and game state management.
+- **durak_actions.py**: Defines action enums and constants used for communication between the game and bots.
+- **example_bot.py**: Example bot implementation for automated gameplay.
+- **main.py**: Likely the entry point for running the backend server or game logic.
+- **bots/**: Directory for additional bot implementations.
+
+### Frontend (`src/` and root)
+- **src/**: Contains React components for the user interface (e.g., `CardGameUI.jsx`, `main.jsx`).
+- **index.html**: The main HTML file for the frontend.
+- **vite.config.js**: Configuration for Vite, the frontend build tool.
+- **package.json**: Lists frontend dependencies and scripts.
+
+## How to Run the Website
+
+### 1. Install Frontend Dependencies
+Open a terminal in the `my-durak` directory and run:
+
+```
+npm install
+```
+
+### 2. Start the Frontend Development Server
+Run:
+
+```
+npm run dev
+```
+
+This will start the Vite development server. By default, the site will be available at `http://localhost:5173` (or as indicated in the terminal).
+
+### 3. (Optional) Run the Backend
+If the backend is required (for bot logic or game state), navigate to the `backend/` directory and run:
+
+```
+python main.py
+```
+
+Make sure you have Python 3 installed. You may need to install any required Python packages (see `requirements.txt` if present, or install manually).
+
+### 4. Open the Website
+Open your browser and go to `http://localhost:5173` to play the game.
+
+---
+
+**Note:**
+- If you make changes to the frontend code, the Vite server will automatically reload the page.
+- For production deployment, use `npm run build` to create optimized static files.
+- Backend/frontend communication may require additional configuration depending on your setup.

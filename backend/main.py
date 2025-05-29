@@ -1,3 +1,20 @@
+# A very detailed explanation about this file:
+# This FastAPI application serves as the backend for a Durak card game.
+# It allows users to upload bot scripts, create game instances, and advance game steps.
+# The application handles CORS, manages game state, and provides endpoints for bot management and game actions.
+# it uses the `durak_game` module to handle game logic, including deck creation, shuffling, dealing cards, and advancing game steps.
+# The bots are expected to be Python scripts that implement a bot interface for playing the game.
+# The application also includes error handling for game not found scenarios and provides a structured response for game states.
+# The application is structured to allow easy addition of new bots and game instances, making it flexible for testing different strategies.
+# This file is part of the my-durak project, which is a web-based implementation of the Durak card game.
+# my-durak/backend/main.py
+# some more detailed explanation:
+# This file is the main entry point for the FastAPI application that serves the backend for the Durak card game.
+# It handles bot uploads, game creation, and game state management.
+# It uses FastAPI to create RESTful endpoints for interacting with the game.
+# It also manages CORS settings to allow cross-origin requests, which is useful for frontend applications.
+
+
 import os
 import uuid
 import importlib.util
@@ -14,7 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from pydantic import BaseModel
 import random
-from durak_game import advance_game_step  # Import the helper
+from durak_game import advance_game_step, SUITS, RANKS  # Import the helper
 
 app = FastAPI()
 app.add_middleware(
@@ -42,9 +59,7 @@ class GameState(BaseModel):
 
 
 def create_deck():
-    suits = ["♠", "♥", "♦", "♣"]
-    ranks = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-    return [{"suit": s, "rank": r} for s in suits for r in ranks]
+    return [{"suit": s, "rank": r} for s in SUITS for r in RANKS]
 
 
 def shuffle(deck):
@@ -118,7 +133,7 @@ async def create_game(request: Request):
     # Find attacker: player with the lowest trump card (lowest rank of trump suit)
     lowest_trump = 20
     attacker = 0
-    trump_rank_order = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+    trump_rank_order = RANKS
     for i, hand in enumerate(hands):
         trump_cards = [
             trump_rank_order.index(c["rank"]) for c in hand if c["suit"] == trump_suit
