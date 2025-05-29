@@ -4,10 +4,10 @@ from durak_actions import Output_actions, Input_actions
 CARDS_PER_HAND = 6
 STARTING_MAX_ATTACK_SIZE = 5
 MAX_ATTACK_SIZE_AFTER_BURN = 6
+RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 
 
 def card_str_to_tuple(card_str):
-    ranks = ["6", "7", "8", "9", "10", "J", "Q", "K", "A"]
     suits = ["♠", "♥", "♦", "♣"]
     if len(card_str) == 3:
         rank = "10"
@@ -15,7 +15,7 @@ def card_str_to_tuple(card_str):
     else:
         rank = card_str[0]
         suit = card_str[1]
-    return (ranks.index(rank), suits.index(suit))
+    return (RANKS.index(rank), suits.index(suit))
 
 
 def inform(player, message, state=None):
