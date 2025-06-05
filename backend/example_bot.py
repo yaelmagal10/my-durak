@@ -2,18 +2,26 @@
 # from durak_actions import Output_actions, Input_actions
 
 from durak_actions import Output_actions, Input_actions
+from typing import List, Tuple, Optional, Any
 
-RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 
 
-def rank_value(card):
+def rank_value(card: Tuple[int, int]) -> int:
     return card[0]
 
 
 class ExampleBot:
-    name = "ExampleBot"
+    name: str = "ExampleBot"
 
-    def __call__(self, message, hand, table_or_attack_card, trump_suit, bot_state=None):
+    def __call__(
+        self,
+        message: Tuple[Any, ...],
+        hand: Optional[List[Tuple[int, int]]],
+        table_or_attack_card: Any,
+        trump_suit: Optional[int],
+        bot_state: Optional[Any] = None,
+    ) -> List[Any]:
         # message: tuple(Input_actions)
         # hand: list of (rank_index, suit_index)
         # table_or_attack_card: list of cards (for attack) or a single card (for defend)
@@ -48,4 +56,4 @@ class ExampleBot:
             return [Output_actions.PASS]
 
 
-bot = ExampleBot()
+bot: ExampleBot = ExampleBot()

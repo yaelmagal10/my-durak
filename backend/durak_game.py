@@ -1,14 +1,15 @@
 from random import shuffle, randint, choices
 from durak_actions import Output_actions, Input_actions
+from typing import List, Tuple, Optional, Any, Dict
 
-CARDS_PER_HAND = 6
-STARTING_MAX_ATTACK_SIZE = 5
-MAX_ATTACK_SIZE_AFTER_BURN = 6
-RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-SUITS = ["♠", "♥", "♦", "♣"]
+CARDS_PER_HAND: int = 6
+STARTING_MAX_ATTACK_SIZE: int = 5
+MAX_ATTACK_SIZE_AFTER_BURN: int = 6
+RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+SUITS: List[str] = ["♣", "♦", "♥", "♠"]
 
 
-def card_str_to_tuple(card_str):
+def card_str_to_tuple(card_str: Optional[str]) -> Optional[Tuple[int, int]]:
     if not card_str:
         return None
     if len(card_str) == 3:
@@ -20,14 +21,16 @@ def card_str_to_tuple(card_str):
     return (RANKS.index(rank), SUITS.index(suit))
 
 
-def inform(player, message, state=None):
+def inform(player: Any, message: Any, state: Any = None) -> Any:
     # Provide default values for bot call signature
     # message, hand, table_or_attack_card, trump_suit, bot_state=None
     # For inform, only message and state are relevant, so pass None for others
     return player.__call__(message, None, None, None, state)
 
 
-def inform_all(player_list, message, states=None):
+def inform_all(
+    player_list: List[Any], message: Any, states: Optional[List[Any]] = None
+) -> None:
     if states is None:
         for player, state in zip(player_list, states):
             inform(player, message, state)
@@ -36,21 +39,21 @@ def inform_all(player_list, message, states=None):
             inform(player, message)
 
 
-def card_tuple_to_str(card_tuple):
+def card_tuple_to_str(card_tuple: Optional[Tuple[int, int]]) -> str:
     if card_tuple is None:
         return ""
     return f"{RANKS[card_tuple[0]]}{SUITS[card_tuple[1]]}"
 
 
-def hand_strs_to_tuples(hand):
+def hand_strs_to_tuples(hand: List[str]) -> List[Optional[Tuple[int, int]]]:
     return [card_str_to_tuple(c) for c in hand]
 
 
-def hand_tuples_to_strs(hand):
+def hand_tuples_to_strs(hand: List[Optional[Tuple[int, int]]]) -> List[str]:
     return [card_tuple_to_str(c) for c in hand]
 
 
-def valid_card_format(card):
+def valid_card_format(card: Any) -> bool:
     return (
         isinstance(card, tuple)
         and len(card) == 2
@@ -61,14 +64,14 @@ def valid_card_format(card):
     )
 
 
-def valid_card_list_format(card_list):
+def valid_card_list_format(card_list: Any) -> bool:
     return isinstance(card_list, list) and all(
         valid_card_format(card) for card in card_list
     )
 
 
 # possible actions: (ATTACK, attacking_card_list) , (DEFEND, defending_card, defending_index) , (TAKE) , (PASS) , (FORWARD, forwarding_card)
-def valid_action_format(action):
+def valid_action_format(action: Any) -> bool:
     if not isinstance(action, list) or len(action) not in [1, 2, 3]:
         return False
     action_kind = action[0]
@@ -103,7 +106,7 @@ def valid_action_format(action):
     return False
 
 
-def init_deck():
+def init_deck() -> List[Tuple[int, int]]:
     deck = list()
     for i in range(13):
         for j in range(4):
@@ -112,21 +115,29 @@ def init_deck():
     return deck
 
 
-def real_cards(card_lst):
+def real_cards(card_lst: List[Optional[Tuple[int, int]]]) -> List[Tuple[int, int]]:
     return [card for card in card_lst if card is not None]
 
 
-def attack_vector(attack: list, defence: list):
+def attack_vector(
+    attack: List[Optional[Tuple[int, int]]], defence: List[Optional[Tuple[int, int]]]
+) -> set:
     if attack[0] is None:  # New attack
         return set(range(13))
     return set(card[0] for card in attack + defence if card is not None)
 
 
-def valid_to_attack(attacking_card: tuple, attack: list, defence: list):
+def valid_to_attack(
+    attacking_card: Tuple[int, int],
+    attack: List[Optional[Tuple[int, int]]],
+    defence: List[Optional[Tuple[int, int]]],
+) -> bool:
     return attacking_card[0] in attack_vector(attack, defence)
 
 
-def valid_to_defend(defending_card: tuple, attacking_card: tuple, kozar_suit: int):
+def valid_to_defend(
+    defending_card: Tuple[int, int], attacking_card: Tuple[int, int], kozar_suit: int
+) -> bool:
     if defending_card[1] == attacking_card[1] and defending_card[0] > attacking_card[0]:
         return True
     if defending_card[1] == kozar_suit and attacking_card[1] != kozar_suit:
@@ -134,7 +145,13 @@ def valid_to_defend(defending_card: tuple, attacking_card: tuple, kozar_suit: in
     return False
 
 
-def take(player_list, player_index, attack, defence, player_hand):
+def take(
+    player_list: List[Any],
+    player_index: int,
+    attack: List[Optional[Tuple[int, int]]],
+    defence: List[Optional[Tuple[int, int]]],
+    player_hand: List[Tuple[int, int]],
+) -> None:
     cards_to_hand = real_cards(attack + defence)
     print(f"real cards = {cards_to_hand}")
     inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
@@ -144,25 +161,14 @@ def take(player_list, player_index, attack, defence, player_hand):
     print(f"actual hand: {player_hand}")
 
 
-def take(player_list, player_index, attack, defence, player_hand):
-    cards_to_hand = real_cards(attack + defence)
-    print(f"real cards = {cards_to_hand}")
-    inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
-    inform_all(player_list, (Input_actions.TAKE_PASSIVE, player_index))
-    for card in cards_to_hand:
-        player_hand.append(card)
-    print(f"actual hand: {player_hand}")
-
-
-# returns 1 if the defence is  successfull and 0 otherwise
 def defend(
     index: int,
-    attack: list,
-    defence: list,
-    defending_card: tuple,
-    defending_hand: list,
+    attack: List[Optional[Tuple[int, int]]],
+    defence: List[Optional[Tuple[int, int]]],
+    defending_card: Tuple[int, int],
+    defending_hand: List[Tuple[int, int]],
     kozar_suit: int,
-):
+) -> int:
     if defending_card not in defending_hand:
         return 0
     if (
@@ -181,8 +187,11 @@ def defend(
 
 
 def attack_action(
-    attack_pointer: list, defence: list, attacking_card: list, attacking_hand: list
-):
+    attack_pointer: List[Optional[Tuple[int, int]]],
+    defence: List[Optional[Tuple[int, int]]],
+    attacking_card: List[Tuple[int, int]],
+    attacking_hand: List[Tuple[int, int]],
+) -> int:
     if attack_pointer and all(card is not None for card in attack_pointer):
         return 0
     # attack_vec = attack_vector(attack, defence)
@@ -204,7 +213,11 @@ def attack_action(
     return 1
 
 
-def make_table_size_of_max_attack_size(table_attack, table_defence, max_attack_size):
+def make_table_size_of_max_attack_size(
+    table_attack: List[Optional[Tuple[int, int]]],
+    table_defence: List[Optional[Tuple[int, int]]],
+    max_attack_size: int,
+) -> Tuple[List[Optional[Tuple[int, int]]], List[Optional[Tuple[int, int]]]]:
     while len(table_attack) > max_attack_size:
         table_attack.pop(None)
     while len(table_defence) > max_attack_size:
@@ -216,7 +229,9 @@ def make_table_size_of_max_attack_size(table_attack, table_defence, max_attack_s
     return table_attack, table_defence
 
 
-def advance_game_step(state, bots, bot_names=None):
+def advance_game_step(
+    state: Dict[str, Any], bots: List[Any], bot_names: Optional[List[str]] = None
+) -> Dict[str, Any]:
     if bot_names is None:
         bot_names = [f"Bot {i+1}" for i in range(len(bots))]
     num_of_players = len(bots)
@@ -234,7 +249,7 @@ def advance_game_step(state, bots, bot_names=None):
         table_attack, table_defence, max_attack_size
     )
     end_of_round = False
-    trump_suit = ["♠", "♥", "♦", "♣"].index(state["trump_suit"])
+    trump_suit = SUITS.index(state["trump_suit"])
     # log is now a list of lists, one per bot
     log = [l[:] for l in state["log"]]
     bot_states = state.get("bot_states", [{} for _ in bots])
@@ -408,7 +423,7 @@ def advance_game_step(state, bots, bot_names=None):
             (
                 (
                     Input_actions.FIRST_ATTACK
-                    if any(card is not None for card in table_attack)
+                    if all(card is None for card in table_attack)
                     else Input_actions.OPTIONAL_ATTACK
                 ),
             ),
