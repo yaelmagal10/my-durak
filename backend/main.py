@@ -41,7 +41,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BOTS_DIR = "bots"
+# Set BOTS_DIR to the absolute path of the backend/bots directory
+BOTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bots")
 GAMES = {}
 
 os.makedirs(BOTS_DIR, exist_ok=True)
@@ -90,11 +91,29 @@ def load_bot(filepath):
 
 @app.post("/api/bots")
 async def upload_bot(file: UploadFile, name: str = Form(...)):
-    filename = f"{uuid.uuid4().hex}_{file.filename}"
-    filepath = os.path.join(BOTS_DIR, filename)
-    with open(filepath, "wb") as f:
-        f.write(await file.read())
-    return {"name": name, "filename": filename}
+    try:
+        filename = f"{uuid.uuid4().hex}_{file.filename}"
+        filepath = os.path.join(BOTS_DIR, filename)
+        print(f"[UPLOAD] Saving bot to: {filepath}")
+        file_content = await file.read()
+        print(
+            f"[UPLOAD] Received file: {file.filename}, size: {len(file_content)} bytes"
+        )
+        with open(filepath, "wb") as f:
+            f.write(file_content)
+        # Confirm file was written
+        if not os.path.exists(filepath):
+            print(f"[UPLOAD ERROR] File not found after write: {filepath}")
+            return JSONResponse({"error": "File not saved."}, status_code=500)
+        print(f"[UPLOAD] File saved successfully: {filepath}")
+        return {"name": name, "filename": filename}
+    except Exception as e:
+        import traceback
+
+        print("[UPLOAD ERROR] Exception occurred during upload:")
+        traceback.print_exc()
+        print(f"[UPLOAD ERROR] Exception details: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.get("/api/bots", response_model=List[BotInfo])

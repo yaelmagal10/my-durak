@@ -36,7 +36,8 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
             setBotFile(null);
             setBotName("");
         } catch (e) {
-            setError("Upload failed");
+            //setError(e.message || "Failed to upload bot");
+            setError("Failed to upload bot. Please ensure the file is a valid Python script.");
         }
     };
 

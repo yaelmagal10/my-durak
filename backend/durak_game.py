@@ -9,6 +9,8 @@ SUITS = ["♠", "♥", "♦", "♣"]
 
 
 def card_str_to_tuple(card_str):
+    if not card_str:
+        return None
     if len(card_str) == 3:
         rank = "10"
         suit = card_str[2]
@@ -19,7 +21,10 @@ def card_str_to_tuple(card_str):
 
 
 def inform(player, message, state=None):
-    return player.__call__(message, state)
+    # Provide default values for bot call signature
+    # message, hand, table_or_attack_card, trump_suit, bot_state=None
+    # For inform, only message and state are relevant, so pass None for others
+    return player.__call__(message, None, None, None, state)
 
 
 def inform_all(player_list, message, states=None):
@@ -32,6 +37,8 @@ def inform_all(player_list, message, states=None):
 
 
 def card_tuple_to_str(card_tuple):
+    if card_tuple is None:
+        return ""
     return f"{RANKS[card_tuple[0]]}{SUITS[card_tuple[1]]}"
 
 
