@@ -153,7 +153,10 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                         background: "linear-gradient(120deg, #f1f5f9 60%, #c7d2fe 100%)",
                                         fontSize: cardFont,
                                         boxShadow: compact ? "0 1px 3px #a5b4fc33" : "0 2px 8px #a5b4fc55",
-                                        color: "#1e293b",
+                                        color:
+                                            card && (card.includes("♥") || card.includes("♦"))
+                                                ? "#e11d48" // red for hearts/diamonds
+                                                : "#1e293b", // black for spades/clubs
                                         fontWeight: 500,
                                         display: "flex",
                                         alignItems: "center",
@@ -195,34 +198,98 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                     </h3>
                     {/* Deck count display */}
                     <div style={{
-                        marginBottom: compact ? 4 : 10,
-                        color: "#0f172a",
-                        fontWeight: 600,
-                        fontSize: compact ? 13 : 18,
+                        color: "#16a34a",
+                        fontWeight: 700,
+                        fontSize: compact ? 15 : 22,
+                        border: "2px solid #22c55e",
+                        borderRadius: 6,
+                        padding: "2px 10px",
+                        background: "#f0fdf4",
+                        marginBottom: compact ? 8 : 16,
+                        minWidth: 80,
+                        textAlign: "center"
                     }}>
-                        Deck left: {deckCount}
+                        Deck: {deckCount}
                     </div>
-                    <div
-                        style={{
-                            background: "#f1f5f9",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: 7,
-                            minHeight: minHandHeight,
-                            minWidth: minTableWidth,
-                            padding: compact ? 4 : 12,
-                            fontSize: tableFont,
-                            marginBottom: compact ? 6 : 16,
+                    {/* Trump card display, always visible and not overlapped */}
+                    {typeof arguments[0].trump_card === "string" && (
+                        <div style={{
                             display: "flex",
                             flexDirection: "column",
-                            gap: compact ? 2 : 8,
-                            flexWrap: "nowrap",
-                            justifyContent: "center",
-                        }}
-                    >
-                        {table_attack && table_attack.length > 0
-                            ? renderTablePairs(table_attack, table_defence)
-                            : <span style={{ color: "#a1a1aa" }}>No cards</span>
-                        }
+                            alignItems: "center",
+                            marginBottom: compact ? 8 : 18,
+                            width: "100%"
+                        }}>
+                            <span style={{ fontWeight: 600, color: "#22c55e", fontSize: compact ? 13 : 18, marginBottom: 2 }}>Kozar card:</span>
+                            <span style={{
+                                display: "inline-block",
+                                minWidth: 36,
+                                minHeight: 36,
+                                border: "2.5px solid #22c55e",
+                                borderRadius: 7,
+                                padding: compact ? "2px 7px" : "6px 14px",
+                                background: "#fff",
+                                fontSize: tableFont,
+                                fontWeight: 700,
+                                color: arguments[0].trump_card.includes("♥") || arguments[0].trump_card.includes("♦") ? "#e11d48" : "#222",
+                                textAlign: "center"
+                            }}>{arguments[0].trump_card}</span>
+                        </div>
+                    )}
+                    {/* Horizontal Attack/Defense Table */}
+                    <div style={{ width: "100%", margin: compact ? "8px 0" : "18px 0", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                        {/* Attack row */}
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: compact ? 4 : 10 }}>
+                            <span style={{ fontWeight: 700, fontSize: tableFont, color: "#222", minWidth: 70, marginRight: 8 }}>Attack:</span>
+                            <div style={{ display: "flex", gap: compact ? 4 : 10 }}>
+                                {(table_attack || []).map((card, i) => (
+                                    <span key={i} style={{
+                                        minWidth: 36,
+                                        minHeight: 36,
+                                        border: "2.5px solid #222",
+                                        borderRadius: 7,
+                                        padding: compact ? "2px 7px" : "6px 14px",
+                                        background: card ? "#fff" : "#f1f5f9",
+                                        fontSize: tableFont,
+                                        fontWeight: 600,
+                                        color: card && (card.includes("♥") || card.includes("♦")) ? "#e11d48" : "#222",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 2,
+                                        opacity: card ? 1 : 0.3,
+                                    }}>
+                                        {card || <span>&#9633;</span>}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        {/* Defense row */}
+                        <div style={{ display: "flex", alignItems: "center" }}>
+                            <span style={{ fontWeight: 700, fontSize: tableFont, color: "#2563eb", minWidth: 70, marginRight: 8 }}>Defense:</span>
+                            <div style={{ display: "flex", gap: compact ? 4 : 10 }}>
+                                {(table_defence || []).map((card, i) => (
+                                    <span key={i} style={{
+                                        minWidth: 36,
+                                        minHeight: 36,
+                                        border: "2.5px solid #2563eb",
+                                        borderRadius: 7,
+                                        padding: compact ? "2px 7px" : "6px 14px",
+                                        background: card ? "#fff" : "#f1f5f9",
+                                        fontSize: tableFont,
+                                        fontWeight: 600,
+                                        color: card && (card.includes("♥") || card.includes("♦")) ? "#e11d48" : "#2563eb",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        marginRight: 2,
+                                        opacity: card ? 1 : 0.3,
+                                    }}>
+                                        {card || <span>&#9633;</span>}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                     {/* Game Log Box */}
                     <h3
@@ -242,6 +309,8 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             border: "1px solid #e5e7eb",
                             borderRadius: 7,
                             height: logHeight,
+                            minHeight: logHeight,
+                            maxHeight: logHeight * 2,
                             overflowY: "auto",
                             padding: compact ? 4 : 12,
                             fontSize: compact ? 11 : 15,
@@ -249,6 +318,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             boxSizing: "border-box",
                             boxShadow: compact ? "0 1px 2px #a5b4fc11" : "0 1px 4px #a5b4fc22",
                             marginBottom: compact ? 6 : 12,
+                            minWidth: 120,
                         }}
                     >
                         {gameLogEntries.length > 0

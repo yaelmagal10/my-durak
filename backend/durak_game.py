@@ -197,12 +197,12 @@ def attack_action(
     # attack_vec = attack_vector(attack, defence)
     for card in attacking_card:
         if card not in attacking_hand:
-            print("1")
+            print("line 200: attacking card not in hand")
             return 0
         if attack_pointer and all(card is not None for card in attack_pointer):
             return 0
         if not valid_to_attack(attacking_card, attack_pointer, defence):
-            print("4")
+            print("Line 205: invalid attack")
             return 0
         attacking_index = attack_pointer.index(
             None
@@ -272,7 +272,7 @@ def advance_game_step(
             table_defence[index] != None or table_attack[index] == None
             for index in range(len(table_attack))
         ):
-            print(f"l203: attack is {table_attack}, defence is {table_defence}")
+            print(f"l275: attack is {table_attack}, defence is {table_defence}")
             burned_cards = tuple(real_cards(table_attack + table_defence))
             inform_all(bots, (Input_actions.BURN, burned_cards), bot_states)
             end_of_round = True
@@ -449,6 +449,32 @@ def advance_game_step(
     hands_str = [hand_tuples_to_strs(h) for h in hands]
     table_attack_str = [card_tuple_to_str(c) for c in table_attack]
     table_defence_str = [card_tuple_to_str(c) for c in table_defence]
+    # --- Deal cards to players after round ends ---
+    if end_of_round:
+        # Get deck from state (if present), else empty
+        deck = state.get("deck", [])
+        # Convert deck from string to tuple if needed
+        if deck and isinstance(deck[0], str):
+            deck = [card_str_to_tuple(c) for c in deck]
+        # The player who started the attack
+        curr_attacker = attacker
+        curr_defender = defender
+        # Deal to attacker first
+        for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_attacker]))):
+            hands[curr_attacker].append(deck.pop())
+        # Deal to all other players in cyclic order, skipping defender
+        for i in range(1, num_of_players):
+            player_index = (curr_attacker + i) % num_of_players
+            if player_index == curr_defender:
+                continue
+            for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[player_index]))):
+                hands[player_index].append(deck.pop())
+        # Deal to defender last
+        for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_defender]))):
+            hands[curr_defender].append(deck.pop())
+        # Update deck in state
+        state["deck"] = deck
+        state["deck_count"] = len(deck)
     return {
         **state,
         "hands": hands_str,
