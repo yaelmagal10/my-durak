@@ -174,6 +174,7 @@ async def create_game(request: Request):
         "log": [[] for _ in bots],  # log is now a list of lists, one per bot
         "bot_states": [{} for _ in bots],
         "burn": False,
+        "deck": [f"{c['rank']}{c['suit']}" for c in deck],
         "deck_count": len(deck),  # Add deck count to state
     }
     game_id = uuid.uuid4().hex

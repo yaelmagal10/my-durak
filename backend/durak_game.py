@@ -122,7 +122,9 @@ def real_cards(card_lst: List[Optional[Tuple[int, int]]]) -> List[Tuple[int, int
 def attack_vector(
     attack: List[Optional[Tuple[int, int]]], defence: List[Optional[Tuple[int, int]]]
 ) -> set:
+    print(f"line 125: attack is {attack}, defence is {defence}")
     if attack[0] is None:  # New attack
+        print("New attack, returning full attack vector")
         return set(range(13))
     return set(card[0] for card in attack + defence if card is not None)
 
@@ -132,6 +134,10 @@ def valid_to_attack(
     attack: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
 ) -> bool:
+    if not attacking_card[0] in attack_vector(attack, defence):
+        print(attacking_card)
+        print(f"Invalid attack: {attacking_card[0]} not in attack vector")
+
     return attacking_card[0] in attack_vector(attack, defence)
 
 
@@ -199,16 +205,16 @@ def attack_action(
         if card not in attacking_hand:
             print("line 200: attacking card not in hand")
             return 0
-        if attack_pointer and all(card is not None for card in attack_pointer):
+        if attack_pointer and all(c is not None for c in attack_pointer):
             return 0
-        if not valid_to_attack(attacking_card, attack_pointer, defence):
-            print("Line 205: invalid attack")
+        if not valid_to_attack(card, attack_pointer, defence):
+            print("line 205: invalid attack")
             return 0
         attacking_index = attack_pointer.index(
             None
         )  # First index available for attacking
-        attacking_hand.remove(attacking_card)
-        attack_pointer[attacking_index] = attacking_card
+        attacking_hand.remove(card)
+        attack_pointer[attacking_index] = card
     print("attack success")
     return 1
 
@@ -232,6 +238,7 @@ def make_table_size_of_max_attack_size(
 def advance_game_step(
     state: Dict[str, Any], bots: List[Any], bot_names: Optional[List[str]] = None
 ) -> Dict[str, Any]:
+    # print(state)
     if bot_names is None:
         bot_names = [f"Bot {i+1}" for i in range(len(bots))]
     num_of_players = len(bots)
@@ -245,9 +252,9 @@ def advance_game_step(
             len(hands[defender]),
             MAX_ATTACK_SIZE_AFTER_BURN if state["burn"] else STARTING_MAX_ATTACK_SIZE,
         )
-    table_attack, table_defence = make_table_size_of_max_attack_size(
-        table_attack, table_defence, max_attack_size
-    )
+        table_attack, table_defence = make_table_size_of_max_attack_size(
+            table_attack, table_defence, max_attack_size
+        )
     end_of_round = False
     trump_suit = SUITS.index(state["trump_suit"])
     # log is now a list of lists, one per bot
@@ -272,7 +279,7 @@ def advance_game_step(
             table_defence[index] != None or table_attack[index] == None
             for index in range(len(table_attack))
         ):
-            print(f"l275: attack is {table_attack}, defence is {table_defence}")
+            print(f"line 275: attack is {table_attack}, defence is {table_defence}")
             burned_cards = tuple(real_cards(table_attack + table_defence))
             inform_all(bots, (Input_actions.BURN, burned_cards), bot_states)
             end_of_round = True
@@ -443,8 +450,27 @@ def advance_game_step(
         else:
             action = result
         if valid_action_format(action) and action[0] == Output_actions.ATTACK:
+            print("line 447: valid attack action")
             attack_action(table_attack, table_defence, action[1], hands[curr_player])
             add_log(curr_player, f"Player {curr_player+1} attacked with {action[1]}")
+        else:
+            print("line 452: invalid attack action")
+            # If this is the first attack (all table_attack are None), pick a random card from hand and attack with it
+            if all(card is None for card in table_attack) and hands[curr_player]:
+                import random
+
+                random_card = random.choice(
+                    [c for c in hands[curr_player] if c is not None]
+                )
+                print(f"line 453: Forcing attack with random card {random_card}")
+                attack_action(
+                    table_attack, table_defence, [random_card], hands[curr_player]
+                )
+                add_log(
+                    curr_player,
+                    f"Player {curr_player+1} attacked with {[random_card]} (forced random)",
+                )
+
     curr_player = (curr_player + 1) % num_of_players
     hands_str = [hand_tuples_to_strs(h) for h in hands]
     table_attack_str = [card_tuple_to_str(c) for c in table_attack]
@@ -460,8 +486,10 @@ def advance_game_step(
         curr_attacker = attacker
         curr_defender = defender
         # Deal to attacker first
+        count_pops = 0
         for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_attacker]))):
             hands[curr_attacker].append(deck.pop())
+            count_pops += 1
         # Deal to all other players in cyclic order, skipping defender
         for i in range(1, num_of_players):
             player_index = (curr_attacker + i) % num_of_players
@@ -469,12 +497,16 @@ def advance_game_step(
                 continue
             for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[player_index]))):
                 hands[player_index].append(deck.pop())
+                count_pops += 1
         # Deal to defender last
         for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_defender]))):
             hands[curr_defender].append(deck.pop())
+            count_pops += 1
         # Update deck in state
+        print(f"Dealt {count_pops} cards from deck")
         state["deck"] = deck
         state["deck_count"] = len(deck)
+        print(f"Remaining deck count: {len(deck)}")
     return {
         **state,
         "hands": hands_str,
