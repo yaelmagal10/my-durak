@@ -122,9 +122,9 @@ def real_cards(card_lst: List[Optional[Tuple[int, int]]]) -> List[Tuple[int, int
 def attack_vector(
     attack: List[Optional[Tuple[int, int]]], defence: List[Optional[Tuple[int, int]]]
 ) -> set:
-    print(f"line 125: attack is {attack}, defence is {defence}")
+    # print(f"line 125: attack is {attack}, defence is {defence}")
     if attack[0] is None:  # New attack
-        print("New attack, returning full attack vector")
+        # print("New attack, returning full attack vector")
         return set(range(13))
     return set(card[0] for card in attack + defence if card is not None)
 
@@ -134,9 +134,9 @@ def valid_to_attack(
     attack: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
 ) -> bool:
-    if not attacking_card[0] in attack_vector(attack, defence):
-        print(attacking_card)
-        print(f"Invalid attack: {attacking_card[0]} not in attack vector")
+    # if not attacking_card[0] in attack_vector(attack, defence):
+    # print(attacking_card)
+    # print(f"Invalid attack: {attacking_card[0]} not in attack vector")
 
     return attacking_card[0] in attack_vector(attack, defence)
 
@@ -157,11 +157,12 @@ def take(
     attack: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
     player_hand: List[Tuple[int, int]],
+    states: Optional[List[Any]] = None,
 ) -> None:
     cards_to_hand = real_cards(attack + defence)
     print(f"real cards = {cards_to_hand}")
     inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
-    inform_all(player_list, (Input_actions.TAKE_PASSIVE, player_index))
+    inform_all(player_list, (Input_actions.TAKE_PASSIVE, player_index), states)
     for card in cards_to_hand:
         player_hand.append(card)
     print(f"actual hand: {player_hand}")
@@ -195,13 +196,13 @@ def defend(
 def attack_action(
     attack_pointer: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
-    attacking_card: List[Tuple[int, int]],
+    attacking_card_lst: List[Tuple[int, int]],
     attacking_hand: List[Tuple[int, int]],
 ) -> int:
     if attack_pointer and all(card is not None for card in attack_pointer):
         return 0
     # attack_vec = attack_vector(attack, defence)
-    for card in attacking_card:
+    for card in attacking_card_lst:
         if card not in attacking_hand:
             print("line 200: attacking card not in hand")
             return 0
@@ -215,7 +216,7 @@ def attack_action(
         )  # First index available for attacking
         attacking_hand.remove(card)
         attack_pointer[attacking_index] = card
-    print("attack success")
+    print("line 219: attack success")
     return 1
 
 
@@ -342,8 +343,10 @@ def advance_game_step(
                             table_attack,
                             table_defence,
                             hands[curr_player],
+                            bot_states,
                         )
                         end_of_round = True
+
                         add_log(curr_player, f"Player {curr_player+1} took cards")
                 elif action[0] == Output_actions.FORWARD:
                     num_of_allowed_forwarding_cards = min(
@@ -363,6 +366,7 @@ def advance_game_step(
                             table_attack,
                             table_defence,
                             hands[defender],
+                            bot_states,
                         )
                         end_of_round = False
                         add_log(defender, f"Player {defender+1} took cards")
@@ -375,6 +379,7 @@ def advance_game_step(
                                 table_attack,
                                 table_defence,
                                 hands[defender],
+                                bot_states,
                             )
                             end_of_round = True
                             add_log(defender, f"Player {defender+1} took cards")
@@ -389,6 +394,7 @@ def advance_game_step(
                                         table_attack,
                                         table_defence,
                                         hands[defender],
+                                        bot_states,
                                     )
                                     end_of_round = True
                                     add_log(defender, f"Player {defender+1} took cards")
@@ -419,6 +425,7 @@ def advance_game_step(
                         table_attack,
                         table_defence,
                         hands[curr_player],
+                        bot_states,
                     )
                     end_of_round = True
                     add_log(curr_player, f"Player {curr_player+1} took cards")
@@ -450,7 +457,7 @@ def advance_game_step(
         else:
             action = result
         if valid_action_format(action) and action[0] == Output_actions.ATTACK:
-            print("line 447: valid attack action")
+            # print("line 447: valid attack action")
             attack_action(table_attack, table_defence, action[1], hands[curr_player])
             add_log(curr_player, f"Player {curr_player+1} attacked with {action[1]}")
         else:
@@ -471,10 +478,6 @@ def advance_game_step(
                     f"Player {curr_player+1} attacked with {[random_card]} (forced random)",
                 )
 
-    curr_player = (curr_player + 1) % num_of_players
-    hands_str = [hand_tuples_to_strs(h) for h in hands]
-    table_attack_str = [card_tuple_to_str(c) for c in table_attack]
-    table_defence_str = [card_tuple_to_str(c) for c in table_defence]
     # --- Deal cards to players after round ends ---
     if end_of_round:
         # Get deck from state (if present), else empty
@@ -507,11 +510,19 @@ def advance_game_step(
         state["deck"] = deck
         state["deck_count"] = len(deck)
         print(f"Remaining deck count: {len(deck)}")
+        table_attack = []
+        table_defence = []
+
+    curr_player = (curr_player + 1) % num_of_players
+    hands_str = [hand_tuples_to_strs(h) for h in hands]
+    table_attack_str = [card_tuple_to_str(c) for c in table_attack]
+    table_defence_str = [card_tuple_to_str(c) for c in table_defence]
+
     return {
         **state,
         "hands": hands_str,
-        "table_attack": table_attack_str,
-        "table_defence": table_defence_str,
+        "table_attack": table_attack_str if not end_of_round else [],
+        "table_defence": table_defence_str if not end_of_round else [],
         "attacker": attacker,
         "defender": defender,
         "log": log,

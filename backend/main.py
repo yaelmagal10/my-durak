@@ -32,6 +32,7 @@ from typing import List
 from pydantic import BaseModel
 import random
 from durak_game import advance_game_step, SUITS, RANKS  # Import the helper
+from const_decks import DECK1
 
 app = FastAPI()
 app.add_middleware(
@@ -89,6 +90,24 @@ def load_bot(filepath):
     return bot_instance
 
 
+def pretty_print_state(state):
+    print("Game State:")
+    print(f"Trump Suit: {state['trump_suit']}")
+    print(f"Trump Card: {state['trump_card']}")
+    print("Hands:")
+    for i, hand in enumerate(state["hands"]):
+        print(f"  Player {i}: {', '.join(hand)}")
+    print(f"Attacker: Player {state['attacker']}")
+    print(f"Defender: Player {state['defender']}")
+    print(f"Table Attack: {state['table_attack']}")
+    print(f"Table Defence: {state['table_defence']}")
+    print(f"Burn: {state['burn']}")
+    print("Deck:")
+    for i, card in enumerate(state["deck"]):
+        print(f"{card}", end="  " if i % 10 != 9 else "\n")
+    print(f"Deck Count: {state['deck_count']}")
+
+
 @app.post("/api/bots")
 async def upload_bot(file: UploadFile, name: str = Form(...)):
     try:
@@ -135,6 +154,8 @@ def get_bot_file(filename: str):
 async def create_game(request: Request):
     bot_filenames = await request.json()
     deck = shuffle(create_deck())
+    print("Currently using a fixed deck (DECK1) for testing")
+    # deck = DECK1
     trump_card = deck[-1]
     trump_suit = trump_card["suit"]
     hands = deal_players(deck, len(bot_filenames))
@@ -177,6 +198,8 @@ async def create_game(request: Request):
         "deck": [f"{c['rank']}{c['suit']}" for c in deck],
         "deck_count": len(deck),  # Add deck count to state
     }
+    # Pretty print the initial state for debugging
+    pretty_print_state(state)
     game_id = uuid.uuid4().hex
     GAMES[game_id] = {"bots": bot_filenames, "bot_names": bot_names, "state": state}
     return GameState(id=game_id, bots=bot_names, state=state)
