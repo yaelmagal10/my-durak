@@ -138,8 +138,9 @@ async def create_game(request: Request):
     deck = shuffle(create_deck())
     print("Currently using a fixed deck (DECK1) for testing")
     # deck = DECK1
-    trump_card = deck[-1]
-    trump_suit = trump_card["suit"]
+    trump_card_obj = deck[-1]
+    trump_card = f"{trump_card_obj['rank']}{trump_card_obj['suit']}"
+    trump_suit = trump_card_obj["suit"]
     hands = deal_players(deck, len(bot_filenames))
     bots = []
     bot_names = []
@@ -168,7 +169,7 @@ async def create_game(request: Request):
     defender = (attacker + 1) % len(bots)
     state = {
         "trump_suit": trump_suit,
-        "trump_card": trump_card,
+        "trump_card": trump_card,  # always a string like '7♠'
         "hands": [[f"{c['rank']}{c['suit']}" for c in h] for h in hands],
         "table_attack": [],
         "table_defence": [],
@@ -178,6 +179,7 @@ async def create_game(request: Request):
         "log": [[] for _ in bots],  # log is now a list of lists, one per bot
         "bot_states": [{} for _ in bots],
         "burn": False,
+        "num_of_burned_cards": 0,
         "deck": [f"{c['rank']}{c['suit']}" for c in deck],
         "deck_count": len(deck),  # Add deck count to state
     }

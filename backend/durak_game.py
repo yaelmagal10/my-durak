@@ -22,6 +22,7 @@ def pretty_print_state(state):
     print(f"Table Attack: {state['table_attack']}")
     print(f"Table Defence: {state['table_defence']}")
     print(f"Burn: {state['burn']}")
+    print(f"Number of Burned Cards: {state['num_of_burned_cards']}")
     print("Deck:")
     for i, card in enumerate(state["deck"]):
         print(f"{card}", end="  " if i % 10 != 9 else "\n")
@@ -262,6 +263,7 @@ def advance_game_step(
     if bot_names is None:
         bot_names = [f"Bot {i+1}" for i in range(len(bots))]
     num_of_players = len(bots)
+    num_of_burned_cards = state["num_of_burned_cards"]
     attacker = state["attacker"]
     defender = state["defender"]
     hands = [card_list_strs_to_tuples(h) for h in state["hands"]]
@@ -305,6 +307,7 @@ def advance_game_step(
                 f"line 286 (burn): attack is {table_attack}, defence is {table_defence}"
             )
             burned_cards = tuple(real_cards(table_attack + table_defence))
+            num_of_burned_cards += len(burned_cards)
             inform_all(bots, (Input_actions.BURN, burned_cards), bot_states)
             state["burn"] = True
             add_log(
@@ -629,5 +632,6 @@ def advance_game_step(
         "bot_states": bot_states,
         "curr_player": curr_player,
         "status": status,
+        "num_of_burned_cards": num_of_burned_cards,
         "deck_count": state.get("deck_count", 0),  # Pass deck count through
     }
