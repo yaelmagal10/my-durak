@@ -259,7 +259,7 @@ def make_table_size_of_max_attack_size(
 def advance_game_step(
     state: Dict[str, Any], bots: List[Any], bot_names: Optional[List[str]] = None
 ) -> Dict[str, Any]:
-    pretty_print_state(state)
+    # pretty_print_state(state)
     if bot_names is None:
         bot_names = [f"Bot {i+1}" for i in range(len(bots))]
     num_of_players = len(bots)
@@ -345,6 +345,7 @@ def advance_game_step(
             else:
                 action = result
             if valid_action_format(action):
+                print("Line 348: Defender action is valid")
                 if action[0] == Output_actions.DEFEND:
                     if defend(
                         action[2][0],
@@ -466,6 +467,20 @@ def advance_game_step(
                     end_of_round = True
                     is_defence_succesful = False
                     add_log(curr_player, f"Player {curr_player+1} took cards")
+
+            else:
+                print("line 400: invalid defence action")
+                take(
+                    bots,
+                    curr_player,
+                    table_attack,
+                    table_defence,
+                    hands[curr_player],
+                    bot_states,
+                )
+                end_of_round = True
+                is_defence_succesful = False
+                add_log(curr_player, f"Player {curr_player+1} took cards")
     else:
         # Prepare arguments for attack
         hand = hands[curr_player]
@@ -572,7 +587,9 @@ def advance_game_step(
                     bot_states,
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
-                print("line 506: invalid attack action")
+                print(
+                    f"line 506: regular attack for player {curr_player+1} has failed, passing turn"
+                )
     # --- Deal cards to players after round ends ---
     if end_of_round:
         # Get deck from state (if present), else empty
