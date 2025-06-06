@@ -31,7 +31,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from pydantic import BaseModel
 import random
-from durak_game import advance_game_step, SUITS, RANKS  # Import the helper
+from durak_game import advance_game_step, SUITS, RANKS, pretty_print_state
 from const_decks import DECK1
 
 app = FastAPI()
@@ -88,24 +88,6 @@ def load_bot(filepath):
     # Try to get 'bot' instance, else fallback to module
     bot_instance = getattr(module, "bot", module)
     return bot_instance
-
-
-def pretty_print_state(state):
-    print("Game State:")
-    print(f"Trump Suit: {state['trump_suit']}")
-    print(f"Trump Card: {state['trump_card']}")
-    print("Hands:")
-    for i, hand in enumerate(state["hands"]):
-        print(f"  Player {i}: {', '.join(hand)}")
-    print(f"Attacker: Player {state['attacker']}")
-    print(f"Defender: Player {state['defender']}")
-    print(f"Table Attack: {state['table_attack']}")
-    print(f"Table Defence: {state['table_defence']}")
-    print(f"Burn: {state['burn']}")
-    print("Deck:")
-    for i, card in enumerate(state["deck"]):
-        print(f"{card}", end="  " if i % 10 != 9 else "\n")
-    print(f"Deck Count: {state['deck_count']}")
 
 
 @app.post("/api/bots")
@@ -192,7 +174,7 @@ async def create_game(request: Request):
         "table_defence": [],
         "attacker": attacker,
         "defender": defender,
-        "current_player": attacker,
+        "curr_player": attacker,
         "log": [[] for _ in bots],  # log is now a list of lists, one per bot
         "bot_states": [{} for _ in bots],
         "burn": False,
