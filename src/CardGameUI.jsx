@@ -142,31 +142,36 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                 Status: {status[idx]}
                             </div>
                         )}
-                        <div style={{ display: "flex", gap: compact ? 4 : 12, marginBottom: compact ? 6 : 18 }}>
-                            {hand.map((card, cidx) => (
-                                <div
-                                    key={cidx}
-                                    style={{
-                                        border: "none",
-                                        borderRadius: 7,
-                                        padding: cardPad,
-                                        background: "linear-gradient(120deg, #f1f5f9 60%, #c7d2fe 100%)",
-                                        fontSize: cardFont,
-                                        boxShadow: compact ? "0 1px 3px #a5b4fc33" : "0 2px 8px #a5b4fc55",
-                                        color:
-                                            card && (card.includes("♥") || card.includes("♦"))
-                                                ? "#e11d48" // red for hearts/diamonds
-                                                : "#1e293b", // black for spades/clubs
-                                        fontWeight: 500,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        minWidth: compact ? 18 : 36,
-                                        minHeight: minHandHeight,
-                                        transition: "transform 0.1s",
-                                    }}
-                                >
-                                    {card}
+                        {/* HAND CARDS WRAPPED IN ROWS OF 4 */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: compact ? 2 : 8, marginBottom: compact ? 6 : 18 }}>
+                            {Array.from({ length: Math.ceil(hand.length / 4) }).map((_, rowIdx) => (
+                                <div key={rowIdx} style={{ display: "flex", gap: compact ? 4 : 12, justifyContent: "center" }}>
+                                    {hand.slice(rowIdx * 4, rowIdx * 4 + 4).map((card, cidx) => (
+                                        <div
+                                            key={cidx}
+                                            style={{
+                                                border: "none",
+                                                borderRadius: 7,
+                                                padding: cardPad,
+                                                background: "linear-gradient(120deg, #f1f5f9 60%, #c7d2fe 100%)",
+                                                fontSize: cardFont,
+                                                boxShadow: compact ? "0 1px 3px #a5b4fc33" : "0 2px 8px #a5b4fc55",
+                                                color:
+                                                    card && (card.includes("♥") || card.includes("♦"))
+                                                        ? "#e11d48"
+                                                        : "#1e293b",
+                                                fontWeight: 500,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                minWidth: compact ? 18 : 36,
+                                                minHeight: minHandHeight,
+                                                transition: "transform 0.1s",
+                                            }}
+                                        >
+                                            {card}
+                                        </div>
+                                    ))}
                                 </div>
                             ))}
                         </div>
