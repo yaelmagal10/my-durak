@@ -1,19 +1,8 @@
-# A very detailed explanation about this file:
-# This FastAPI application serves as the backend for a Durak card game.
-# It allows users to upload bot scripts, create game instances, and advance game steps.
-# The application handles CORS, manages game state, and provides endpoints for bot management and game actions.
-# it uses the `durak_game` module to handle game logic, including deck creation, shuffling, dealing cards, and advancing game steps.
-# The bots are expected to be Python scripts that implement a bot interface for playing the game.
-# The application also includes error handling for game not found scenarios and provides a structured response for game states.
-# The application is structured to allow easy addition of new bots and game instances, making it flexible for testing different strategies.
-# This file is part of the my-durak project, which is a web-based implementation of the Durak card game.
-# my-durak/backend/main.py
-# some more detailed explanation:
-# This file is the main entry point for the FastAPI application that serves the backend for the Durak card game.
+# To restore: main.py for FastAPI backend of Durak game
+# This file serves as the main backend entry point for the Durak card game.
 # It handles bot uploads, game creation, and game state management.
 # It uses FastAPI to create RESTful endpoints for interacting with the game.
 # It also manages CORS settings to allow cross-origin requests, which is useful for frontend applications.
-
 
 import os
 import uuid
@@ -61,19 +50,22 @@ class GameState(BaseModel):
 
 
 def create_deck():
-    return [{"suit": s, "rank": r} for s in SUITS for r in RANKS]
+    deck = [{"rank": r, "suit": s} for s in SUITS for r in RANKS]
+    random.shuffle(deck)
+    return deck
 
 
 def shuffle(deck):
-    d = deck[:]
-    random.shuffle(d)
-    return d
+    random.shuffle(deck)
+    return deck
 
 
 def deal_players(deck, num_players):
     hands = [[] for _ in range(num_players)]
-    for i in range(6 * num_players):
-        hands[i % num_players].append(deck.pop())
+    for i in range(6):
+        for j in range(num_players):
+            if deck:
+                hands[j].append(deck.pop(0))
     return hands
 
 
@@ -90,6 +82,25 @@ def load_bot(filepath):
     return bot_instance
 
 
+@app.get("/api/bots", response_model=List[BotInfo])
+def list_bots():
+    bots = []
+    for fname in os.listdir(BOTS_DIR):
+        # Exclude __pycache__ and any non-.py files
+        if fname == "__pycache__" or not fname.endswith(".py"):
+            continue
+        # Try to read the display name from a .name file if it exists
+        name_file = os.path.splitext(fname)[0] + ".name"
+        name = None
+        if os.path.exists(os.path.join(BOTS_DIR, name_file)):
+            with open(os.path.join(BOTS_DIR, name_file), "r", encoding="utf-8") as f:
+                name = f.read().strip()
+        if not name:
+            name = fname.split("_", 1)[-1].replace(".py", "")
+        bots.append(BotInfo(name=name, filename=fname))
+    return bots
+
+
 @app.post("/api/bots")
 async def upload_bot(file: UploadFile, name: str = Form(...)):
     try:
@@ -102,6 +113,10 @@ async def upload_bot(file: UploadFile, name: str = Form(...)):
         )
         with open(filepath, "wb") as f:
             f.write(file_content)
+        # Save the display name in a .name file
+        name_file = os.path.splitext(filepath)[0] + ".name"
+        with open(name_file, "w", encoding="utf-8") as f:
+            f.write(name)
         # Confirm file was written
         if not os.path.exists(filepath):
             print(f"[UPLOAD ERROR] File not found after write: {filepath}")
@@ -115,16 +130,6 @@ async def upload_bot(file: UploadFile, name: str = Form(...)):
         traceback.print_exc()
         print(f"[UPLOAD ERROR] Exception details: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)
-
-
-@app.get("/api/bots", response_model=List[BotInfo])
-def list_bots():
-    bots = []
-    for fname in os.listdir(BOTS_DIR):
-        bots.append(
-            BotInfo(name=fname.split("_", 1)[-1].replace(".py", ""), filename=fname)
-        )
-    return bots
 
 
 @app.get("/api/bots/{filename}")
@@ -148,10 +153,15 @@ async def create_game(request: Request):
         bot_path = os.path.join(BOTS_DIR, fname)
         bot_instance = load_bot(bot_path)
         bots.append(bot_instance)
-        # Use bot.name if available, else fallback to filename
-        bot_name = getattr(
-            bot_instance, "name", fname.split("_", 1)[-1].replace(".py", "")
-        )
+        # Use bot.name if available, else fallback to .name file, else fallback to filename
+        bot_name = getattr(bot_instance, "name", None)
+        if not bot_name:
+            name_file = os.path.splitext(bot_path)[0] + ".name"
+            if os.path.exists(name_file):
+                with open(name_file, "r", encoding="utf-8") as f:
+                    bot_name = f.read().strip()
+        if not bot_name:
+            bot_name = fname.split("_", 1)[-1].replace(".py", "")
         bot_names.append(bot_name)
     # Find attacker: player with the lowest trump card (lowest rank of trump suit)
     lowest_trump = 20

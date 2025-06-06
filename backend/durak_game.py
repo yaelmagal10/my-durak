@@ -1,7 +1,9 @@
 from random import shuffle, choice, randint, choices
 from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
+from inspect import currentframe
 
+get_line = lambda: currentframe().f_lineno
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
@@ -45,7 +47,11 @@ def inform(player: Any, message: Any, state: Any = None) -> Any:
     # Provide default values for bot call signature
     # message, hand, table_or_attack_card, trump_suit, bot_state=None
     # For inform, only message and state are relevant, so pass None for others
-    return player.__call__(message, None, None, None, state)
+    try:
+        return player.__call__(message, None, None, None, state)
+    except:
+        print(f"Error calling player {player}: {message}")
+        return None
 
 
 def inform_all(
@@ -236,7 +242,7 @@ def attack_action(
         )  # First index available for attacking
         attacking_hand.remove(card)
         attack_pointer[attacking_index] = card
-    print("line 219: attack success")
+    print(f"line {get_line()}: attack success")
     return 1
 
 
@@ -304,7 +310,7 @@ def advance_game_step(
             for index in range(len(table_attack))
         ):
             print(
-                f"line 286 (burn): attack is {table_attack}, defence is {table_defence}"
+                f"line {get_line()} (burn): attack is {table_attack}, defence is {table_defence}"
             )
             burned_cards = tuple(real_cards(table_attack + table_defence))
             num_of_burned_cards += len(burned_cards)
@@ -326,13 +332,19 @@ def advance_game_step(
                     attack_card = table_attack[i]
                     break
             # Call bot with correct signature
-            result = bots[curr_player].__call__(
-                (Input_actions.DEFENCE,),
-                hand,
-                attack_card,
-                trump_suit,
-                bot_states[curr_player],
-            )
+            try:
+                result = bots[curr_player].__call__(
+                    (Input_actions.DEFENCE,),
+                    hand,
+                    attack_card,
+                    trump_suit,
+                    bot_states[curr_player],
+                )
+            except:
+                print(
+                    f"line {get_line()}: Bot {bot_names[curr_player]} raised an exception during defence"
+                )
+                result = Output_actions.TAKE
             # If bot returns dict, extract log/status
             if isinstance(result, dict):
                 action = result.get("action")
@@ -345,7 +357,7 @@ def advance_game_step(
             else:
                 action = result
             if valid_action_format(action):
-                print("Line 348: Defender action is valid")
+                print("Line {get_line()}: Defender action is valid")
                 if action[0] == Output_actions.DEFEND:
                     if defend(
                         action[2][0],
@@ -469,7 +481,7 @@ def advance_game_step(
                     add_log(curr_player, f"Player {curr_player+1} took cards")
 
             else:
-                print("line 400: invalid defence action")
+                print(f"line {get_line()}: invalid defence action")
                 take(
                     bots,
                     curr_player,
@@ -485,19 +497,25 @@ def advance_game_step(
         # Prepare arguments for attack
         hand = hands[curr_player]
         table = [c for c in table_attack if c is not None]
-        result = bots[curr_player].__call__(
-            (
+        try:
+            result = bots[curr_player].__call__(
                 (
-                    Input_actions.FIRST_ATTACK
-                    if all(card is None for card in table_attack)
-                    else Input_actions.OPTIONAL_ATTACK
+                    (
+                        Input_actions.FIRST_ATTACK
+                        if all(card is None for card in table_attack)
+                        else Input_actions.OPTIONAL_ATTACK
+                    ),
                 ),
-            ),
-            hand,
-            table,
-            trump_suit,
-            bot_states[curr_player],
-        )
+                hand,
+                table,
+                trump_suit,
+                bot_states[curr_player],
+            )
+        except:
+            print(
+                f"line {get_line()}: Bot {bot_names[curr_player]} raised an exception during attack"
+            )
+            result = Output_actions.PASS
         if isinstance(result, dict):
             action = result.get("action")
             bot_log = result.get("log")
@@ -534,7 +552,7 @@ def advance_game_step(
                         [c for c in hands[curr_player] if c is not None]
                     )
                     print(
-                        f"line 486: Forcing attack with random card from hand: {random_card}"
+                        f"line {get_line()}: Forcing attack with random card from hand: {random_card}"
                     )
                     res = attack_action(
                         table_attack, table_defence, [random_card], hands[curr_player]
@@ -554,7 +572,7 @@ def advance_game_step(
                         f"Player {curr_player+1} attacked with {card_tuple_to_str(random_card)} (forced random)",
                     )
                 else:
-                    print("line 495: No cards to attack with")
+                    print(f"line {get_line()}: No cards to attack with")
                     print(
                         "THIS SHOULD NOT HAPPEN"
                     )  # YOAD: This is related to the end game  where the player who starts the attack has no cards.
@@ -588,7 +606,7 @@ def advance_game_step(
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
                 print(
-                    f"line 506: regular attack for player {curr_player+1} has failed, passing turn"
+                    f"line {get_line()}: regular attack for player {curr_player+1} has failed, passing turn"
                 )
     # --- Deal cards to players after round ends ---
     if end_of_round:

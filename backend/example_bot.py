@@ -12,7 +12,9 @@ def rank_value(card: Tuple[int, int]) -> int:
 
 
 class ExampleBot:
-    name: str = "ExampleBot"
+    # name: str = "ExampleBot"
+    # If you provide a name field, it will be used in the game UI.
+    # Otherwise, the bot's name will be as you chose it in the UI of uploading bots.
 
     def __call__(
         self,
