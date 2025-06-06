@@ -192,6 +192,7 @@ async def create_game(request: Request):
         "table_defence": [],
         "attacker": attacker,
         "defender": defender,
+        "current_player": attacker,
         "log": [[] for _ in bots],  # log is now a list of lists, one per bot
         "bot_states": [{} for _ in bots],
         "burn": False,

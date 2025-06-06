@@ -1,4 +1,4 @@
-from random import shuffle, randint, choices
+from random import shuffle, choice, randint, choices
 from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
 
@@ -257,6 +257,8 @@ def advance_game_step(
             table_attack, table_defence, max_attack_size
         )
     end_of_round = False
+    # If the attack is successful, the defender will be the next player
+    is_defence_succesful = True
     trump_suit = SUITS.index(state["trump_suit"])
     # log is now a list of lists, one per bot
     log = [l[:] for l in state["log"]]
@@ -280,10 +282,15 @@ def advance_game_step(
             table_defence[index] != None or table_attack[index] == None
             for index in range(len(table_attack))
         ):
-            print(f"line 275: attack is {table_attack}, defence is {table_defence}")
+            print(
+                f"line 286 (burn): attack is {table_attack}, defence is {table_defence}"
+            )
             burned_cards = tuple(real_cards(table_attack + table_defence))
             inform_all(bots, (Input_actions.BURN, burned_cards), bot_states)
+            state["burn"] = True
+            add_log(defender, f"Player {defender+1} burned cards: {burned_cards}")
             end_of_round = True
+            is_defence_succesful = True
         else:
             # Prepare arguments for defence
             hand = hands[curr_player]
@@ -346,6 +353,7 @@ def advance_game_step(
                             bot_states,
                         )
                         end_of_round = True
+                        is_defence_succesful = False
 
                         add_log(curr_player, f"Player {curr_player+1} took cards")
                 elif action[0] == Output_actions.FORWARD:
@@ -368,7 +376,8 @@ def advance_game_step(
                             hands[defender],
                             bot_states,
                         )
-                        end_of_round = False
+                        end_of_round = True
+                        is_defence_succesful = False
                         add_log(defender, f"Player {defender+1} took cards")
                     else:
                         forwarding_cards = action[1]
@@ -382,6 +391,7 @@ def advance_game_step(
                                 bot_states,
                             )
                             end_of_round = True
+                            is_defence_succesful = False
                             add_log(defender, f"Player {defender+1} took cards")
                         else:
                             for card in forwarding_cards:
@@ -397,6 +407,7 @@ def advance_game_step(
                                         bot_states,
                                     )
                                     end_of_round = True
+                                    is_defence_succesful = False
                                     add_log(defender, f"Player {defender+1} took cards")
                                     break
                                 else:
@@ -428,6 +439,7 @@ def advance_game_step(
                         bot_states,
                     )
                     end_of_round = True
+                    is_defence_succesful = False
                     add_log(curr_player, f"Player {curr_player+1} took cards")
     else:
         # Prepare arguments for attack
@@ -456,28 +468,81 @@ def advance_game_step(
                 set_status(curr_player, bot_status)
         else:
             action = result
-        if valid_action_format(action) and action[0] == Output_actions.ATTACK:
-            # print("line 447: valid attack action")
-            attack_action(table_attack, table_defence, action[1], hands[curr_player])
-            add_log(curr_player, f"Player {curr_player+1} attacked with {action[1]}")
-        else:
-            print("line 452: invalid attack action")
-            # If this is the first attack (all table_attack are None), pick a random card from hand and attack with it
-            if all(card is None for card in table_attack) and hands[curr_player]:
-                import random
 
-                random_card = random.choice(
-                    [c for c in hands[curr_player] if c is not None]
+        # The first attack case: player has to attack with at least 1 card.
+        is_succesful_attack = False
+        if all(card is None for card in table_attack):
+            if valid_action_format(action) and action[0] == Output_actions.ATTACK:
+                is_succesful_attack = attack_action(
+                    table_attack, table_defence, action[1], hands[curr_player]
                 )
-                print(f"line 453: Forcing attack with random card {random_card}")
-                attack_action(
-                    table_attack, table_defence, [random_card], hands[curr_player]
+            if is_succesful_attack:
+                inform_all(
+                    bots,
+                    (Input_actions.FIRST_ATTACK_PASSIVE, curr_player, action[1]),
+                    bot_states,
                 )
                 add_log(
-                    curr_player,
-                    f"Player {curr_player+1} attacked with {[random_card]} (forced random)",
+                    curr_player, f"Player {curr_player+1} attacked with {action[1]}"
                 )
+            if not is_succesful_attack:
+                print("line 476: invalid first attack action")
+                # If this is the first attack (all table_attack are None), pick a random card from hand and attack with it
+                if hands[curr_player]:
+                    random_card = choice(
+                        [c for c in hands[curr_player] if c is not None]
+                    )
+                    print(
+                        f"line 486: Forcing attack with random card from hand: {random_card}"
+                    )
+                    attack_action(
+                        table_attack, table_defence, [random_card], hands[curr_player]
+                    )
+                    inform_all(
+                        bots,
+                        (
+                            Input_actions.FIRST_ATTACK_PASSIVE,
+                            curr_player,
+                            [random_card],
+                        ),
+                        bot_states,
+                    )
+                    add_log(
+                        curr_player,
+                        f"Player {curr_player+1} attacked with {[random_card]} (forced random)",
+                    )
+                else:
+                    print("line 495: No cards to attack with")
+                    print(
+                        "THIS SHOULD NOT HAPPEN"
+                    )  # YOAD: This is related to the end game  where the player who starts the attack has no cards.
 
+        # The regular attack case: player can attack with 0 or more cards.
+        else:
+            if valid_action_format(action) and action[0] == Output_actions.ATTACK:
+                is_succesful_attack = attack_action(
+                    table_attack, table_defence, action[1], hands[curr_player]
+                )
+                add_log(
+                    curr_player, f"Player {curr_player+1} attacked with {action[1]}"
+                )
+            if is_succesful_attack:
+                inform_all(
+                    bots,
+                    (
+                        Input_actions.OPTIONAL_ATTACK_PASSIVE,
+                        curr_player,
+                        action[1],
+                    ),
+                    bot_states,
+                )
+            else:
+                inform_all(
+                    bots,
+                    (Input_actions.PASS_PASSIVE, curr_player),
+                    bot_states,
+                )
+                print("line 506: invalid attack action")
     # --- Deal cards to players after round ends ---
     if end_of_round:
         # Get deck from state (if present), else empty
@@ -510,10 +575,18 @@ def advance_game_step(
         state["deck"] = deck
         state["deck_count"] = len(deck)
         print(f"Remaining deck count: {len(deck)}")
+        # Reset table attack and defence
         table_attack = []
         table_defence = []
+        attacker = (
+            defender if is_defence_succesful else (defender + 1) % num_of_players
+        )  # YOAD
+        defender = (attacker + 1) % num_of_players  # YOAD
+        curr_player = attacker  # Reset current player to the new attacker
 
-    curr_player = (curr_player + 1) % num_of_players
+    else:  # If not end of round, just advance to the next player
+        curr_player = (curr_player + 1) % num_of_players  # YOAD
+
     hands_str = [hand_tuples_to_strs(h) for h in hands]
     table_attack_str = [card_tuple_to_str(c) for c in table_attack]
     table_defence_str = [card_tuple_to_str(c) for c in table_defence]
