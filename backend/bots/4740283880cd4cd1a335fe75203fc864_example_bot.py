@@ -49,7 +49,7 @@ class ExampleBot:
                     if hand and any(c[0] == rank_to_forward for c in hand):
                         # Forward with the first card of that rank
                         card = next(c for c in hand if c[0] == rank_to_forward)
-                        return [Output_actions.FORWARD, [card]]
+                        return [Output_actions.FORWARD, [card], [0]]
             if attack_card is None or not hand:
                 return [Output_actions.TAKE]
             candidates = [

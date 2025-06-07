@@ -228,22 +228,24 @@ def attack_action(
     if attack_pointer and all(card is not None for card in attack_pointer):
         return 0
     # attack_vec = attack_vector(attack, defence)
+    count_attacks = 0
     for card in attacking_card_lst:
         if card not in attacking_hand:
             print("line 200: attacking card not in hand")
-            return 0
+            continue
         if attack_pointer and all(c is not None for c in attack_pointer):
-            return 0
+            continue
         if not valid_to_attack(card, attack_pointer, defence):
             print("line 205: invalid attack")
-            return 0
+            continue
         attacking_index = attack_pointer.index(
             None
         )  # First index available for attacking
         attacking_hand.remove(card)
         attack_pointer[attacking_index] = card
+        count_attacks += 1
     print(f"line {get_line()}: attack success")
-    return 1
+    return count_attacks
 
 
 def make_table_size_of_max_attack_size(
@@ -397,7 +399,7 @@ def advance_game_step(
                 elif action[0] == Output_actions.FORWARD:
                     num_of_allowed_forwarding_cards = min(
                         max_attack_size,
-                        len(hands[(defender + 1) % num_of_players]),
+                        len(hands[(defender + 1) % num_of_players]),  # YOAD
                     ) - len(real_cards(table_attack))
                     if (
                         table_defence[0] != None
