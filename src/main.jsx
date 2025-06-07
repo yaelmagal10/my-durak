@@ -193,6 +193,22 @@ function GamePage({ onBack, selectedBots }) {
         setGameState(data);
     };
 
+    // Helper: get winner and loser indices
+    function getWinnersAndLoser(gameState) {
+        if (!gameState?.state?.hands) return { winners: [], loser: null };
+        const hands = gameState.state.hands;
+        const bots = gameState.bots || [];
+        const winners = [];
+        let loser = null;
+        hands.forEach((hand, idx) => {
+            if (hand.length === 0) winners.push(idx);
+        });
+        if (hands.filter(h => h.length > 0).length === 1) {
+            loser = hands.findIndex(h => h.length > 0);
+        }
+        return { winners, loser };
+    }
+
     // Show play mode selection before starting the game
     if (!gameStarted) {
         return (
@@ -246,6 +262,105 @@ function GamePage({ onBack, selectedBots }) {
                 </button>
                 <button
                     style={{ padding: "8px 20px", fontSize: 16, borderRadius: 8 }}
+                    onClick={onBack}
+                >
+                    Back to Bot Manager
+                </button>
+            </div>
+        );
+    }
+
+    // Check for loser state
+    const { winners, loser } = getWinnersAndLoser(gameState);
+
+    if (gameState && gameState.state && loser !== null) {
+        // Only one player left with cards: show LOSER screen
+        const bots = gameState.bots || [];
+        return (
+            <div style={{
+                margin: 0,
+                minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)"
+            }}>
+                <div style={{
+                    fontSize: 48,
+                    fontWeight: 900,
+                    color: "#dc2626",
+                    marginBottom: 24,
+                    letterSpacing: 2,
+                    textShadow: "0 2px 12px #fca5a5"
+                }}>
+                    LOSER: Player {loser + 1} {bots[loser] ? `(${bots[loser]})` : ""}
+                </div>
+                <div style={{
+                    fontSize: 28,
+                    fontWeight: 700,
+                    color: "#22c55e",
+                    marginBottom: 18,
+                    letterSpacing: 1
+                }}>
+                    Winners:
+                </div>
+                <ul style={{ fontSize: 22, color: "#2563eb", fontWeight: 600, marginBottom: 32 }}>
+                    {winners.map(idx => (
+                        <li key={idx}>
+                            Player {idx + 1} {bots[idx] ? `(${bots[idx]})` : ""}
+                        </li>
+                    ))}
+                </ul>
+                <div style={{
+                    width: "100%",
+                    maxWidth: 700,
+                    background: "#f1f5f9",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 10,
+                    padding: 18,
+                    marginBottom: 32,
+                    boxShadow: "0 2px 12px #a5b4fc22"
+                }}>
+                    <div style={{ fontWeight: 700, fontSize: 20, color: "#6366f1", marginBottom: 10 }}>Game Log:</div>
+                    <div style={{
+                        maxHeight: 300,
+                        overflowY: "auto",
+                        fontSize: 15,
+                        color: "#475569"
+                    }}>
+                        {/* Show all logs for all bots */}
+                        {gameState.state.log && Array.isArray(gameState.state.log) && gameState.state.log.length > 0
+                            ? gameState.state.log.map((botLog, idx) => (
+                                <div key={idx} style={{ marginBottom: 10 }}>
+                                    <div style={{ color: "#6366f1", fontWeight: 600, fontSize: 16, marginBottom: 2 }}>
+                                        Player {idx + 1} {bots && bots[idx] ? `(${bots[idx]})` : ""}
+                                    </div>
+                                    {botLog && botLog.length > 0
+                                        ? botLog.map((entry, eidx) => (
+                                            <div key={eidx} style={{ marginBottom: 2 }}>
+                                                {entry}
+                                            </div>
+                                        ))
+                                        : <div style={{ color: "#a1a1aa" }}>No log yet</div>
+                                    }
+                                </div>
+                            ))
+                            : <div style={{ color: "#a1a1aa" }}>No log yet</div>
+                        }
+                    </div>
+                </div>
+                <button
+                    style={{
+                        padding: "12px 40px",
+                        fontSize: 22,
+                        borderRadius: 10,
+                        background: "#6366f1",
+                        color: "#fff",
+                        fontWeight: 700,
+                        border: "none",
+                        boxShadow: "0 2px 8px #a5b4fc44"
+                    }}
                     onClick={onBack}
                 >
                     Back to Bot Manager

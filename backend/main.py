@@ -316,9 +316,13 @@ if __name__ == "__main__":
         alive = [i for i, h in enumerate(state["hands"]) if len(h) > 0]
         if len(alive) <= 1:
             print("\n=== GAME OVER ===")
+            # Print all winners
             for idx, h in enumerate(state["hands"]):
                 if len(h) == 0:
                     print(f"WINNER: {bot_names[idx]}")
+            # Print the loser (the only one with cards left)
+            if len(alive) == 1:
+                print(f"\nLOSER: {bot_names[alive[0]]}")
             break
         # Advance game step
         state = advance_game_step(state, bots, bot_names)

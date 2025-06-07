@@ -116,17 +116,26 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                         {chunkArray(hands, 2).map((handsRow, rowIdx) => (
                             <div key={rowIdx} style={{ display: "flex", gap: compact ? 10 : 36, marginBottom: compact ? 6 : 18, justifyContent: "center" }}>
                                 {handsRow.map((hand, idxInRow) => {
-                                    // Calculate the global player index
                                     const idx = rowIdx * 2 + idxInRow;
+                                    // Determine highlight color for attacker/defender
+                                    let borderColor = "none";
+                                    let boxShadow = compact ? "0 2px 8px 0 #a5b4fc33" : "0 4px 24px 0 #a5b4fc66";
+                                    if (attacker === idx) {
+                                        borderColor = "#f59e42";
+                                        boxShadow = "0 0 0 4px #fde68a, 0 2px 8px 0 #a5b4fc33";
+                                    } else if (defender === idx) {
+                                        borderColor = "#3b82f6";
+                                        boxShadow = "0 0 0 4px #93c5fd, 0 2px 8px 0 #a5b4fc33";
+                                    }
                                     return (
                                         <div
                                             key={idx}
                                             style={{
-                                                border: attacker === idx || defender === idx ? "2px solid #6366f1" : "none",
+                                                border: borderColor === "none" ? "none" : `3px solid ${borderColor}`,
                                                 borderRadius: 12,
                                                 padding: boxPad,
                                                 background: "rgba(255,255,255,0.95)",
-                                                boxShadow: compact ? "0 2px 8px 0 #a5b4fc33" : "0 4px 24px 0 #a5b4fc66",
+                                                boxShadow,
                                                 minWidth: minHandWidth,
                                                 display: "flex",
                                                 flexDirection: "column",
@@ -138,14 +147,27 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                                 style={{
                                                     fontWeight: 600,
                                                     fontSize: h3Font,
-                                                    color: attacker === idx ? "#f59e42" : defender === idx ? "#3b82f6" : "#6366f1",
+                                                    color:
+                                                        attacker === idx
+                                                            ? "#f59e42"
+                                                            : defender === idx
+                                                                ? "#3b82f6"
+                                                                : "#6366f1",
                                                     marginBottom: compact ? 6 : 16,
                                                     letterSpacing: 0.5,
                                                 }}
                                             >
                                                 {`Player ${idx + 1} (${bots && bots[idx] ? bots[idx] : "?"})`}
-                                                {attacker === idx && " (Attacker)"}
-                                                {defender === idx && " (Defender)"}
+                                                {attacker === idx && (
+                                                    <span style={{ color: "#f59e42", marginLeft: 6, fontWeight: 700 }}>
+                                                        (Attacker)
+                                                    </span>
+                                                )}
+                                                {defender === idx && (
+                                                    <span style={{ color: "#3b82f6", marginLeft: 6, fontWeight: 700 }}>
+                                                        (Defender)
+                                                    </span>
+                                                )}
                                             </h3>
                                             {/* Show status if available */}
                                             {status && status[idx] && (
