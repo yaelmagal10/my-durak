@@ -310,6 +310,8 @@ function GamePage({ onBack, selectedBots }) {
                         compact
                         status={gameState.state.status}
                         deck_count={gameState.state.deck_count}
+                        trump_card={gameState.state.trump_card}
+                        num_of_burned_cards={gameState.state.num_of_burned_cards}
                     />
                     <div style={{ marginTop: 12 }}>
                         {playMode === "step" && (

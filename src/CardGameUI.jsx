@@ -1,7 +1,7 @@
 import React from "react";
 
-// CardGameUI expects props: hands, table_attack, table_defence, log, attacker, defender, bots, compact, status
-export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact, status }) {
+// CardGameUI expects props: hands, table_attack, table_defence, log, attacker, defender, bots, compact, status, deck_count, trump_card
+export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact, status, deck_count, trump_card, num_of_burned_cards }) {
     const pad = compact ? 10 : 32;
     const cardPad = compact ? "6px 8px" : "16px 18px";
     const cardFont = compact ? 16 : 24;
@@ -14,9 +14,6 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
     const tableFont = compact ? 15 : 22;
     const minTableWidth = compact ? 40 : 80;
     const maxHandBoxHeight = compact ? 170 : undefined;
-
-    // Accept deck_count from props (passed via ...gameState.state)
-    const deckCount = arguments[0].deck_count ?? 0;
 
     // Helper to display attack/defence pairs
     function renderTablePairs(table_attack, table_defence) {
@@ -216,33 +213,8 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             minWidth: 80,
                             textAlign: "center"
                         }}>
-                            Deck: {deckCount}
+                            Deck: {deck_count}
                         </div>
-                        {/* Trump card display, always visible and not overlapped */}
-                        {typeof arguments[0].trump_card === "string" && (
-                            <div style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                marginBottom: compact ? 8 : 18,
-                                width: "100%"
-                            }}>
-                                <span style={{ fontWeight: 600, color: "#22c55e", fontSize: compact ? 13 : 18, marginBottom: 2 }}>Kozar card:</span>
-                                <span style={{
-                                    display: "inline-block",
-                                    minWidth: 36,
-                                    minHeight: 36,
-                                    border: "2.5px solid #22c55e",
-                                    borderRadius: 7,
-                                    padding: compact ? "2px 7px" : "6px 14px",
-                                    background: "#fff",
-                                    fontSize: tableFont,
-                                    fontWeight: 700,
-                                    color: arguments[0].trump_card.includes("♥") || arguments[0].trump_card.includes("♦") ? "#e11d48" : "#222",
-                                    textAlign: "center"
-                                }}>{arguments[0].trump_card}</span>
-                            </div>
-                        )}
                         {/* Horizontal Attack/Defense Table */}
                         <div style={{ width: "100%", margin: compact ? "8px 0" : "18px 0", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
                             {/* Attack row */}
@@ -426,7 +398,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                 }}>
                     <div style={{ fontWeight: 700, fontSize: compact ? 15 : 22, color: "#6366f1", marginBottom: 10 }}>Game Info:</div>
                     <div style={{ marginBottom: 8 }}>
-                        <span style={{ fontWeight: 500 }}>Burned Cards:</span> {arguments[0].num_of_burned_cards ?? arguments[0].state?.num_of_burned_cards ?? 0}
+                        <span style={{ fontWeight: 500 }}>Burned Cards:</span> {num_of_burned_cards}
                     </div>
                     <div>
                         <span style={{ fontWeight: 500 }}>Trump Card:</span> <span style={{
@@ -439,9 +411,9 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             background: "#fff",
                             fontSize: compact ? 16 : 22,
                             fontWeight: 700,
-                            color: (arguments[0].trump_card ?? arguments[0].state?.trump_card ?? "").includes("♥") || (arguments[0].trump_card ?? arguments[0].state?.trump_card ?? "").includes("♦") ? "#e11d48" : "#222",
+                            color: trump_card && (trump_card.includes("♥") || trump_card.includes("♦")) ? "#e11d48" : "#222",
                             textAlign: "center"
-                        }}>{(arguments[0].trump_card ?? arguments[0].state?.trump_card) || "?"}</span>
+                        }}>{trump_card || "?"}</span>
                     </div>
                 </div>
             </div>

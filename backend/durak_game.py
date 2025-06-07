@@ -652,6 +652,9 @@ def advance_game_step(
     else:  # If not end of round, just advance to the next player
         curr_player = (curr_player + 1) % num_of_players  # YOAD
 
+    # Always update deck_count before returning state
+    state["deck_count"] = len(state.get("deck", []))
+
     hands_str = [card_list_tuples_to_strs(h) for h in hands]
     table_attack_str = [card_tuple_to_str(c) for c in table_attack]
     table_defence_str = [card_tuple_to_str(c) for c in table_defence]
@@ -668,5 +671,5 @@ def advance_game_step(
         "curr_player": curr_player,
         "status": status,
         "num_of_burned_cards": num_of_burned_cards,
-        "deck_count": state.get("deck_count", 0),  # Pass deck count through
+        "deck_count": state["deck_count"],  # Always up-to-date deck count
     }
