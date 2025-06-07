@@ -74,7 +74,11 @@ def load_bot(filepath):
     backend_dir = os.path.dirname(os.path.abspath(__file__))
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Bot file not found: {filepath}")
     spec = importlib.util.spec_from_file_location("bot", filepath)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load spec for bot file: {filepath}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     # Try to get 'bot' instance, else fallback to module
@@ -219,3 +223,104 @@ async def step_game(game_id: str):
     new_state = advance_game_step(state, bots, game.get("bot_names", []))
     game["state"] = new_state
     return GameState(id=game_id, bots=game.get("bot_names", []), state=new_state)
+
+
+if __name__ == "__main__":
+    import argparse
+    import time
+
+    parser = argparse.ArgumentParser(description="Run Durak game in CLI mode (no UI).")
+    parser.add_argument(
+        "bots", nargs="+", help="List of bot .py files (from backend/bots/)"
+    )
+    parser.add_argument(
+        "--delay", type=float, default=0.5, help="Delay between steps (seconds)"
+    )
+    args = parser.parse_args()
+
+    # Prepare bot filenames and paths
+    bot_filenames = args.bots
+    bot_paths = [os.path.join(BOTS_DIR, fname) for fname in bot_filenames]
+    bots = [load_bot(path) for path in bot_paths]
+    bot_names = []
+    for bot_instance, fname in zip(bots, bot_filenames):
+        bot_name = getattr(bot_instance, "name", None)
+        if not bot_name:
+            name_file = os.path.splitext(os.path.join(BOTS_DIR, fname))[0] + ".name"
+            if os.path.exists(name_file):
+                with open(name_file, "r", encoding="utf-8") as f:
+                    bot_name = f.read().strip()
+        if not bot_name:
+            bot_name = fname.split("_", 1)[-1].replace(".py", "")
+        bot_names.append(bot_name)
+
+    # Create deck and initial state (reuse logic from create_game)
+    deck = shuffle(create_deck())
+    trump_card_obj = deck[-1]
+    trump_card = f"{trump_card_obj['rank']}{trump_card_obj['suit']}"
+    trump_suit = trump_card_obj["suit"]
+    hands = deal_players(deck, len(bot_filenames))
+    # Build initial state
+    state = {
+        "trump_suit": trump_suit,
+        "trump_card": trump_card,
+        "hands": [[f"{c['rank']}{c['suit']}" for c in h] for h in hands],
+        "table_attack": [],
+        "table_defence": [],
+        "attacker": 0,
+        "defender": 1,
+        "curr_player": 0,
+        "log": [[] for _ in bots],
+        "bot_states": [{} for _ in bots],
+        "burn": False,
+        "num_of_burned_cards": 0,
+        "deck": [f"{c['rank']}{c['suit']}" for c in deck],
+        "deck_count": len(deck),
+    }
+    # Find attacker: player with the lowest trump card
+    lowest_trump = 20
+    trump_rank_order = RANKS
+    for i, hand in enumerate(hands):
+        trump_cards = [
+            trump_rank_order.index(c["rank"]) for c in hand if c["suit"] == trump_suit
+        ]
+        if trump_cards:
+            min_trump = min(trump_cards)
+            if min_trump < lowest_trump:
+                lowest_trump = min_trump
+                state["attacker"] = i
+    state["defender"] = (state["attacker"] + 1) % len(bots)
+    state["curr_player"] = state["attacker"]
+
+    print("=== Durak CLI Game ===")
+    print(f"Trump card: {state['trump_card']}")
+    print(f"Trump suit: {state['trump_suit']}")
+    print(f"Bots: {bot_names}")
+    print("Starting game...\n")
+
+    step = 0
+    while True:
+        print(f"\n--- Step {step} ---")
+        print(
+            f"Attacker: {bot_names[state['attacker']]} | Defender: {bot_names[state['defender']]}"
+        )
+        print(f"Hands: {[len(h) for h in state['hands']]}")
+        print(f"Deck count: {state['deck_count']}")
+        print(f"Table attack: {state['table_attack']}")
+        print(f"Table defence: {state['table_defence']}")
+        # Print last log entries for each bot
+        for idx, bot_log in enumerate(state["log"]):
+            if bot_log:
+                print(f"Log [{bot_names[idx]}]: {bot_log[-1]}")
+        # Check for game end
+        alive = [i for i, h in enumerate(state["hands"]) if len(h) > 0]
+        if len(alive) <= 1:
+            print("\n=== GAME OVER ===")
+            for idx, h in enumerate(state["hands"]):
+                if len(h) == 0:
+                    print(f"WINNER: {bot_names[idx]}")
+            break
+        # Advance game step
+        state = advance_game_step(state, bots, bot_names)
+        step += 1
+        time.sleep(args.delay)
