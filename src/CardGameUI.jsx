@@ -92,6 +92,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                 background: compact
                     ? "linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)"
                     : "linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)",
+                marginLeft: "5cm", // Move everything 5cm to the right
             }}
         >
             <h2
