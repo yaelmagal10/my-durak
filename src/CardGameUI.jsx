@@ -10,7 +10,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
     const h2Font = compact ? 20 : 36;
     const h3Font = compact ? 15 : 22;
     const boxPad = compact ? 10 : 24;
-    const logHeight = compact ? 60 : 120;
+    const logHeight = compact ? 200 : 120;
     const tableFont = compact ? 15 : 22;
     const minTableWidth = compact ? 40 : 80;
     const maxHandBoxHeight = compact ? 170 : undefined;
@@ -72,6 +72,15 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
         return entries;
     }
 
+    // Helper to chunk an array into rows of n
+    function chunkArray(arr, n) {
+        const result = [];
+        for (let i = 0; i < arr.length; i += n) {
+            result.push(arr.slice(i, i + n));
+        }
+        return result;
+    }
+
     const gameLogEntries = getGameLog(log, bots);
 
     return (
@@ -83,6 +92,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                 background: compact
                     ? "linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)"
                     : "linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)",
+                marginLeft: "5cm", // Move everything 5cm to the right
             }}
         >
             <h2
@@ -99,83 +109,95 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                 Durak Game
             </h2>
             <div style={{ display: "flex", gap: compact ? 10 : 36, justifyContent: "center", alignItems: "flex-start" }}>
-                {/* Main board area */}
-                <div style={{ display: "flex", gap: compact ? 10 : 36 }}>
-                    {hands.map((hand, idx) => (
-                        <div
-                            key={idx}
-                            style={{
-                                border: attacker === idx || defender === idx ? "2px solid #6366f1" : "none",
-                                borderRadius: 12,
-                                padding: boxPad,
-                                background: "rgba(255,255,255,0.95)",
-                                boxShadow: compact ? "0 2px 8px 0 #a5b4fc33" : "0 4px 24px 0 #a5b4fc66",
-                                minWidth: minHandWidth,
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                maxHeight: maxHandBoxHeight,
-                            }}
-                        >
-                            <h3
-                                style={{
-                                    fontWeight: 600,
-                                    fontSize: h3Font,
-                                    color: attacker === idx ? "#f59e42" : defender === idx ? "#3b82f6" : "#6366f1",
-                                    marginBottom: compact ? 6 : 16,
-                                    letterSpacing: 0.5,
-                                }}
-                            >
-                                {`Player ${idx + 1} (${bots && bots[idx] ? bots[idx] : "?"})`}
-                                {attacker === idx && " (Attacker)"}
-                                {defender === idx && " (Defender)"}
-                            </h3>
-                            {/* Show status if available */}
-                            {status && status[idx] && (
-                                <div style={{
-                                    color: "#0ea5e9",
-                                    fontWeight: 500,
-                                    fontSize: compact ? 11 : 15,
-                                    marginBottom: compact ? 2 : 6,
-                                }}>
-                                    Status: {status[idx]}
-                                </div>
-                            )}
-                            {/* HAND CARDS WRAPPED IN ROWS OF 4 */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: compact ? 2 : 8, marginBottom: compact ? 6 : 18 }}>
-                                {Array.from({ length: Math.ceil(hand.length / 4) }).map((_, rowIdx) => (
-                                    <div key={rowIdx} style={{ display: "flex", gap: compact ? 4 : 12, justifyContent: "center" }}>
-                                        {hand.slice(rowIdx * 4, rowIdx * 4 + 4).map((card, cidx) => (
-                                            <div
-                                                key={cidx}
+                {/* Hands area (left), Table+Logs (middle), Game Info (right) */}
+                <div style={{ display: "flex", flexDirection: "row", gap: compact ? 10 : 36 }}>
+                    {/* Player hands in rows of 2 */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: compact ? 10 : 36 }}>
+                        {chunkArray(hands, 2).map((handsRow, rowIdx) => (
+                            <div key={rowIdx} style={{ display: "flex", gap: compact ? 10 : 36, marginBottom: compact ? 6 : 18, justifyContent: "center" }}>
+                                {handsRow.map((hand, idxInRow) => {
+                                    // Calculate the global player index
+                                    const idx = rowIdx * 2 + idxInRow;
+                                    return (
+                                        <div
+                                            key={idx}
+                                            style={{
+                                                border: attacker === idx || defender === idx ? "2px solid #6366f1" : "none",
+                                                borderRadius: 12,
+                                                padding: boxPad,
+                                                background: "rgba(255,255,255,0.95)",
+                                                boxShadow: compact ? "0 2px 8px 0 #a5b4fc33" : "0 4px 24px 0 #a5b4fc66",
+                                                minWidth: minHandWidth,
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                maxHeight: maxHandBoxHeight,
+                                            }}
+                                        >
+                                            <h3
                                                 style={{
-                                                    border: "none",
-                                                    borderRadius: 7,
-                                                    padding: cardPad,
-                                                    background: "linear-gradient(120deg, #f1f5f9 60%, #c7d2fe 100%)",
-                                                    fontSize: cardFont,
-                                                    boxShadow: compact ? "0 1px 3px #a5b4fc33" : "0 2px 8px #a5b4fc55",
-                                                    color:
-                                                        card && (card.includes("♥") || card.includes("♦"))
-                                                            ? "#e11d48"
-                                                            : "#1e293b",
-                                                    fontWeight: 500,
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    minWidth: compact ? 18 : 36,
-                                                    minHeight: minHandHeight,
-                                                    transition: "transform 0.1s",
+                                                    fontWeight: 600,
+                                                    fontSize: h3Font,
+                                                    color: attacker === idx ? "#f59e42" : defender === idx ? "#3b82f6" : "#6366f1",
+                                                    marginBottom: compact ? 6 : 16,
+                                                    letterSpacing: 0.5,
                                                 }}
                                             >
-                                                {card}
+                                                {`Player ${idx + 1} (${bots && bots[idx] ? bots[idx] : "?"})`}
+                                                {attacker === idx && " (Attacker)"}
+                                                {defender === idx && " (Defender)"}
+                                            </h3>
+                                            {/* Show status if available */}
+                                            {status && status[idx] && (
+                                                <div style={{
+                                                    color: "#0ea5e9",
+                                                    fontWeight: 500,
+                                                    fontSize: compact ? 11 : 15,
+                                                    marginBottom: compact ? 2 : 6,
+                                                }}>
+                                                    Status: {status[idx]}
+                                                </div>
+                                            )}
+                                            {/* HAND CARDS WRAPPED IN ROWS OF 4 */}
+                                            <div style={{ display: "flex", flexDirection: "column", gap: compact ? 2 : 8, marginBottom: compact ? 6 : 18 }}>
+                                                {Array.from({ length: Math.ceil(hand.length / 4) }).map((_, rowIdx) => (
+                                                    <div key={rowIdx} style={{ display: "flex", gap: compact ? 4 : 12, justifyContent: "center" }}>
+                                                        {hand.slice(rowIdx * 4, rowIdx * 4 + 4).map((card, cidx) => (
+                                                            <div
+                                                                key={cidx}
+                                                                style={{
+                                                                    border: "none",
+                                                                    borderRadius: 7,
+                                                                    padding: cardPad,
+                                                                    background: "linear-gradient(120deg, #f1f5f9 60%, #c7d2fe 100%)",
+                                                                    fontSize: cardFont,
+                                                                    boxShadow: compact ? "0 1px 3px #a5b4fc33" : "0 2px 8px #a5b4fc55",
+                                                                    color:
+                                                                        card && (card.includes("♥") || card.includes("♦"))
+                                                                            ? "#e11d48"
+                                                                            : "#1e293b",
+                                                                    fontWeight: 500,
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "center",
+                                                                    minWidth: compact ? 18 : 36,
+                                                                    minHeight: minHandHeight,
+                                                                    transition: "transform 0.1s",
+                                                                }}
+                                                            >
+                                                                {card}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                ))}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    {/* Table and logs area (middle) */}
                     <div
                         style={{
                             minWidth: compact ? 180 : 320,
@@ -381,39 +403,39 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                             }
                         </div>
                     </div>
-                </div>
-                {/* Game Info area to the right */}
-                <div style={{
-                    minWidth: 180,
-                    marginLeft: compact ? 10 : 36,
-                    background: "rgba(255,255,255,0.92)",
-                    borderRadius: 12,
-                    boxShadow: "0 2px 12px #a5b4fc22",
-                    padding: compact ? 10 : 24,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    fontSize: compact ? 14 : 18,
-                    color: "#222",
-                }}>
-                    <div style={{ fontWeight: 700, fontSize: compact ? 15 : 22, color: "#6366f1", marginBottom: 10 }}>Game Info:</div>
-                    <div style={{ marginBottom: 8 }}>
-                        <span style={{ fontWeight: 500 }}>Burned Cards:</span> {num_of_burned_cards}
-                    </div>
-                    <div>
-                        <span style={{ fontWeight: 500 }}>Trump Card:</span> <span style={{
-                            display: "inline-block",
-                            minWidth: 36,
-                            minHeight: 28,
-                            border: "2px solid #22c55e",
-                            borderRadius: 7,
-                            padding: compact ? "2px 7px" : "4px 12px",
-                            background: "#fff",
-                            fontSize: compact ? 16 : 22,
-                            fontWeight: 700,
-                            color: trump_card && (trump_card.includes("♥") || trump_card.includes("♦")) ? "#e11d48" : "#222",
-                            textAlign: "center"
-                        }}>{trump_card || "?"}</span>
+                    {/* Game Info area (right) */}
+                    <div style={{
+                        minWidth: 180,
+                        marginLeft: compact ? 10 : 36,
+                        background: "rgba(255,255,255,0.92)",
+                        borderRadius: 12,
+                        boxShadow: "0 2px 12px #a5b4fc22",
+                        padding: compact ? 10 : 24,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        fontSize: compact ? 14 : 18,
+                        color: "#222",
+                    }}>
+                        <div style={{ fontWeight: 700, fontSize: compact ? 15 : 22, color: "#6366f1", marginBottom: 10 }}>Game Info:</div>
+                        <div style={{ marginBottom: 8 }}>
+                            <span style={{ fontWeight: 500 }}>Burned Cards:</span> {num_of_burned_cards}
+                        </div>
+                        <div>
+                            <span style={{ fontWeight: 500 }}>Trump Card:</span> <span style={{
+                                display: "inline-block",
+                                minWidth: 36,
+                                minHeight: 28,
+                                border: "2px solid #22c55e",
+                                borderRadius: 7,
+                                padding: compact ? "2px 7px" : "4px 12px",
+                                background: "#fff",
+                                fontSize: compact ? 16 : 22,
+                                fontWeight: 700,
+                                color: trump_card && (trump_card.includes("♥") || trump_card.includes("♦")) ? "#e11d48" : "#222",
+                                textAlign: "center"
+                            }}>{trump_card || "?"}</span>
+                        </div>
                     </div>
                 </div>
             </div>
