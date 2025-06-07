@@ -296,6 +296,37 @@ def advance_game_step(
     # Add a status list per bot if not present
     status = state.get("status", ["" for _ in bots])
 
+    # --- WINNER DETECTION AND REMOVAL ---
+    # Helper to mark winners and remove them from the round
+    def update_winners_and_remove():
+        nonlocal hands, bots, bot_names, log, status, attacker, defender, curr_player, num_of_players
+        # Mark as "WON" if hand is empty and not already marked
+        for i, hand in enumerate(hands):
+            if len(hand) == 0 and status[i] != "WON":
+                status[i] = "WON"
+                log[i].append("Player has WON!")
+        # Remove all players who have won from the round (but keep them in the state for UI)
+        # Only active players participate in the round
+        active_indices = [i for i, hand in enumerate(hands) if len(hand) > 0]
+        if not active_indices:
+            return
+
+        # Update attacker, defender, curr_player to next active if needed
+        def next_active(idx):
+            for offset in range(1, len(hands) + 1):
+                ni = (idx + offset) % len(hands)
+                if len(hands[ni]) > 0:
+                    return ni
+            return idx
+
+        if len(hands[attacker]) == 0:
+            attacker = next_active(attacker)
+        if len(hands[defender]) == 0 or defender == attacker:
+            defender = next_active(attacker)
+        if len(hands[curr_player]) == 0:
+            curr_player = next_active(curr_player)
+        # If only one player left, game is over (handled by frontend/end condition)
+
     # Helper to add a log entry for a specific bot
     def add_log(bot_idx, entry):
         if 0 <= bot_idx < len(log):
@@ -645,14 +676,14 @@ def advance_game_step(
         # Reset table attack and defence
         table_attack = []
         table_defence = []
-        attacker = (
-            defender if is_defence_succesful else (defender + 1) % num_of_players
-        )  # YOAD
+        attacker = defender if is_defence_succesful else (defender + 1) % num_of_players
         defender = (attacker + 1) % num_of_players  # YOAD
         curr_player = attacker  # Reset current player to the new attacker
-
-    else:  # If not end of round, just advance to the next player
-        curr_player = (curr_player + 1) % num_of_players  # YOAD
+        # Update winners and remove them from the round
+        update_winners_and_remove()
+    else:
+        curr_player = (curr_player + 1) % num_of_players
+        update_winners_and_remove()
 
     # Always update deck_count before returning state
     state["deck_count"] = len(state.get("deck", []))
@@ -673,5 +704,5 @@ def advance_game_step(
         "curr_player": curr_player,
         "status": status,
         "num_of_burned_cards": num_of_burned_cards,
-        "deck_count": state["deck_count"],  # Always up-to-date deck count
+        "deck_count": state["deck_count"],
     }
