@@ -8,6 +8,8 @@ import os
 import uuid
 import importlib.util
 import sys
+import io
+import traceback
 
 # Add this before importing durak_game
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -379,15 +381,58 @@ def tournament(num_of_games=10, to_print=False):
     print("\n=== Tournament Results ===")
     for i, count in enumerate(loser_count_lst):
         print(f"Player {i + 1} lost {count} times.")
-    print(f"\n{game_idx - count_proper_games} games got caught in an infinite loop.")
-    return loser_count_lst
+    num_of_infinite_games = game_idx - count_proper_games
+    print(f"\n{num_of_infinite_games} games got caught in an infinite loop.")
+    return loser_count_lst, num_of_infinite_games
+
+
+@app.post("/api/tournament")
+async def run_tournament(request: Request):
+    data = await request.json()
+    bot_filenames = data.get("bots", [])
+    num_games = int(data.get("numGames", 10))
+    if len(bot_filenames) < 2:
+        return JSONResponse({"error": "At least 2 bots required"}, status_code=400)
+    # Prepare sys.argv for tournament
+    sys_argv_backup = sys.argv
+    sys.argv = ["main.py"] + bot_filenames
+    # Redirect stdout to capture tournament output
+    old_stdout = sys.stdout
+    stdout_capture = io.StringIO()
+    sys.stdout = stdout_capture
+    try:
+        loser_count_lst, num_of_infinite_games = tournament(
+            num_of_games=num_games, to_print=True
+        )
+        # output = stdout_capture.getvalue()
+    except Exception as e:
+        sys.stdout = old_stdout
+        sys.argv = sys_argv_backup
+        return JSONResponse({"error": str(e)}, status_code=500)
+    sys.stdout = old_stdout
+    sys.argv = sys_argv_backup
+    # Count infinite games from output
+    # infinite_games = 0
+    # total_games = num_games
+    # for line in output.splitlines():
+    #     if "infinite loop" in line:
+    #         try:
+    #             infinite_games = int(line.split()[0])
+    #         except Exception:
+    #             pass
+    return {
+        "loser_count_lst": loser_count_lst,
+        "total_games": sum(loser_count_lst) + num_of_infinite_games,
+        "infinite_games": num_of_infinite_games,
+        # "output": output,
+    }
 
 
 if __name__ == "__main__":
     import time
 
     start_time = time.time()
-    tournament(num_of_games=1000)  # Run tournament with 100 games
+    tournament(num_of_games=100)  # Run tournament with 100 games
     end_time = time.time()
     print(f"Total time taken: {end_time - start_time:.2f} seconds")
     print(f"Max steps achieved in any game: {max_steps_achieved}")
