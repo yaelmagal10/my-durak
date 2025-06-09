@@ -187,8 +187,12 @@ def take(
 ) -> None:
     cards_to_hand = real_cards(attack + defence)
     print(f"real cards = {cards_to_hand}")
-    inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
-    inform_all(player_list, (Input_actions.TAKE_PASSIVE, player_index), states)
+    # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
+    inform_all(
+        player_list,
+        (Input_actions.TAKE_PASSIVE, player_index, tuple(cards_to_hand)),
+        states,
+    )
     for card in cards_to_hand:
         player_hand.append(card)
     print(f"actual hand: {player_hand}")
@@ -526,7 +530,7 @@ def advance_game_step(
                 end_of_round = True
                 is_defence_succesful = False
                 add_log(curr_player, f"Player {curr_player+1} took cards")
-    else:
+    else:  # If the current player is not the defender, they are attacking
         # Prepare arguments for attack
         hand = hands[curr_player]
         table = [c for c in table_attack if c is not None]

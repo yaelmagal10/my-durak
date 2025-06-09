@@ -2,19 +2,20 @@ from enum import Enum
 
 
 class Input_actions(Enum):
-    OPTIONAL_ATTACK = 0  # attack with a card list
-    FIRST_ATTACK = 1
-    DEFENCE = 2  # defend with a card
+    OPTIONAL_ATTACK = 0  # attack with a card list, you may pass.
+    FIRST_ATTACK = 1  # attack with a card list, you must attack.
+    DEFENCE = 2  # defend with cards
 
-    TO_HAND = 7  # info about the cards you took from deck to hand
-    BURN = 8  # the attack was burned
-    GAME_INIT = 9  # info about game initialization
-    OPTIONAL_ATTACK_PASSIVE = 10  # info about an optional attack
-    FIRST_ATTACK_PASSIVE = 11  # info about a beginning of a new attack
-    DEFENCE_PASSIVE = 12  # info about a defence
-    TAKE_PASSIVE = 13  # the defender took the attack cards to his hands
-    FORWARD_PASSIVE = 14  # the defender forwarded the attack
-    PASS_PASSIVE = 15  # do nothing (as an attacker in an existing attack)
+    TO_HAND = 7  # info about the cards you took from deck to hand. Format: (Input_actions.TO_HAND, card_tuple)
+    BURN = 8  # the attack was burned. Format: (Input_actions.BURN, card_tuple)
+    GAME_INIT = 9  # info about game initialization. Format: (Input_actions.GAME_INIT, num_of_players, player_index, hand,  kozar_card)
+    OPTIONAL_ATTACK_PASSIVE = 10  # info about an optional attack. Format: (OPTIONAL_ATTACK_PASSIVE, attacker_index, card_tuple)
+    FIRST_ATTACK_PASSIVE = 11  # info about a beginning of a new attack. Format: (FIRST_ATTACK_PASSIVE, attacker_index, card_tuple)
+    DEFENCE_PASSIVE = 12  # info about a defence. Format: (DEFENCE_PASSIVE, defender_index, defending_card, index)
+    TAKE_PASSIVE = 13  # the defender took the attack cards to his hands. Format: (TAKE_PASSIVE, defender_index, card_tuple)
+    FORWARD_PASSIVE = 14  # the defender forwarded the attack. Format: (FORWARD_PASSIVE, forwarder_index, card_tuple)
+    PASS_PASSIVE = 15  # A player passed (as an optional attacker he chose not to attack). Format: (PASS_PASSIVE, passer_index)
+    WINNER_PASSIVE = 16  # info about a player who won the game. Format: (WINNER_PASSIVE, winner_index)
 
 
 class Output_actions(Enum):
