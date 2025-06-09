@@ -390,7 +390,7 @@ def advance_game_step(
             else:
                 action = result
             if valid_action_format(action):
-                print("Line {get_line()}: Defender action is valid")
+                print(f"line {get_line()}: Defender action is valid")
                 if action[0] == Output_actions.DEFEND:
                     if defend(
                         action[2][0],

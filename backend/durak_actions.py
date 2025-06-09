@@ -5,8 +5,6 @@ class Input_actions(Enum):
     OPTIONAL_ATTACK = 0  # attack with a card list
     FIRST_ATTACK = 1
     DEFENCE = 2  # defend with a card
-    TAKE = 3  # take the cards from the attack (as an unsuccessful defender)
-    FORWARD = 4  # forward an attack (as a current defender)
 
     TO_HAND = 7  # info about the cards you took from deck to hand
     BURN = 8  # the attack was burned
@@ -20,7 +18,7 @@ class Input_actions(Enum):
 
 
 class Output_actions(Enum):
-    ATTACK = 20  # attack with a card
+    ATTACK = 20  # attack with a card list
     DEFEND = 21  # defend with a card
     TAKE = 22  # take the cards from the attack (as an unsuccessful defender)
     PASS = 23  # do nothing (as an attacker in an existing attack)

@@ -225,9 +225,16 @@ async def step_game(game_id: str):
     return GameState(id=game_id, bots=game.get("bot_names", []), state=new_state)
 
 
-if __name__ == "__main__":
+max_steps_achieved = 0
+
+
+def main(to_print=False):
+    global max_steps_achieved
+
     import argparse
     import time
+
+    MAX_NUM_OF_STEPS = 700  # Limit to prevent infinite loops
 
     parser = argparse.ArgumentParser(description="Run Durak game in CLI mode (no UI).")
     parser.add_argument(
@@ -253,6 +260,8 @@ if __name__ == "__main__":
         if not bot_name:
             bot_name = fname.split("_", 1)[-1].replace(".py", "")
         bot_names.append(bot_name)
+
+    bot_names = [f"Player {i+1}: {bot_names[i]}" for i in range(len(bot_names))]
 
     # Create deck and initial state (reuse logic from create_game)
     deck = shuffle(create_deck())
@@ -292,39 +301,93 @@ if __name__ == "__main__":
     state["defender"] = (state["attacker"] + 1) % len(bots)
     state["curr_player"] = state["attacker"]
 
-    print("=== Durak CLI Game ===")
-    print(f"Trump card: {state['trump_card']}")
-    print(f"Trump suit: {state['trump_suit']}")
-    print(f"Bots: {bot_names}")
-    print("Starting game...\n")
+    if to_print:
+        print("=== Durak CLI Game ===")
+        print(f"Trump card: {state['trump_card']}")
+        print(f"Trump suit: {state['trump_suit']}")
+        print(f"Bots: {bot_names}")
+        print("Starting game...\n")
 
     step = 0
     while True:
         print(f"\n--- Step {step} ---")
-        print(
-            f"Attacker: {bot_names[state['attacker']]} | Defender: {bot_names[state['defender']]}"
-        )
-        print(f"Hands: {[len(h) for h in state['hands']]}")
-        print(f"Deck count: {state['deck_count']}")
-        print(f"Table attack: {state['table_attack']}")
-        print(f"Table defence: {state['table_defence']}")
-        # Print last log entries for each bot
-        for idx, bot_log in enumerate(state["log"]):
-            if bot_log:
-                print(f"Log [{bot_names[idx]}]: {bot_log[-1]}")
+
+        if to_print:
+
+            print(f"\n--- Step {step} ---")
+            print(
+                f"Attacker: {bot_names[state['attacker']]} | Defender: {bot_names[state['defender']]}"
+            )
+            print(f"Hands: {[len(h) for h in state['hands']]}")
+            print(f"Deck count: {state['deck_count']}")
+            print(f"Table attack: {state['table_attack']}")
+            print(f"Table defence: {state['table_defence']}")
+            # Print last log entries for each bot
+            for idx, bot_log in enumerate(state["log"]):
+                if bot_log:
+                    print(f"Log [{bot_names[idx]}]: {bot_log[-1]}")
         # Check for game end
-        alive = [i for i, h in enumerate(state["hands"]) if len(h) > 0]
-        if len(alive) <= 1:
+        # A player is only out if their hand is empty AND the deck is empty
+        alive = [
+            i
+            for i, h in enumerate(state["hands"])
+            if len(h) > 0 or len(state["deck"]) > 0
+        ]
+        if len(alive) <= 1 or step >= MAX_NUM_OF_STEPS:
             print("\n=== GAME OVER ===")
             # Print all winners
-            for idx, h in enumerate(state["hands"]):
-                if len(h) == 0:
-                    print(f"WINNER: {bot_names[idx]}")
-            # Print the loser (the only one with cards left)
-            if len(alive) == 1:
-                print(f"\nLOSER: {bot_names[alive[0]]}")
-            break
+            if step == MAX_NUM_OF_STEPS:
+                print("Game ended due to reaching max steps.\nNo one loses.")
+                return -1  # Indicate game ended without a loser
+            else:
+                max_steps_achieved = max(max_steps_achieved, step)
+                for idx, h in enumerate(state["hands"]):
+                    if len(h) == 0:
+                        print(f"WINNER: {bot_names[idx]}")
+                # Print the loser (the only one with cards left)
+                if len(alive) == 1:
+                    print(f"\nLOSER: {bot_names[alive[0]]}")
+                    return alive[0]  # Return the index of the loser
         # Advance game step
         state = advance_game_step(state, bots, bot_names)
         step += 1
-        time.sleep(args.delay)
+        # print(args.delay)
+        # time.sleep(args.delay)
+
+
+def tournament(num_of_games=10, to_print=False):
+    loser_count_lst = [0 for _ in range(len(sys.argv) - 1)]
+    count_proper_games = 0
+    max_total_games = 2 * num_of_games
+    game_idx = 0
+    while count_proper_games < num_of_games and game_idx < max_total_games:
+        if to_print:
+            print(f"Game {game_idx + 1} of {num_of_games}:")
+
+        # Redirect stdout to avoid inner printing, # but still allow outer prints
+        sys.stdout = open(os.devnull, "w")
+        loser = main(to_print=False)
+        sys.stdout = sys.__stdout__
+        if loser != -1:
+            if to_print:
+                print(f"Game {game_idx + 1} ended with loser: {loser}")
+            loser_count_lst[loser] += 1
+            count_proper_games += 1
+        elif to_print:
+            print(f"Game {game_idx + 1} ended without a loser (max steps reached).")
+        game_idx += 1
+    print("\n=== Tournament Results ===")
+    for i, count in enumerate(loser_count_lst):
+        print(f"Player {i + 1} lost {count} times.")
+    print(f"\n{game_idx - count_proper_games} games got caught in an infinite loop.")
+    return loser_count_lst
+
+
+if __name__ == "__main__":
+    import time
+
+    start_time = time.time()
+    tournament(num_of_games=1000)  # Run tournament with 100 games
+    end_time = time.time()
+    print(f"Total time taken: {end_time - start_time:.2f} seconds")
+    print(f"Max steps achieved in any game: {max_steps_achieved}")
