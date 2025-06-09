@@ -116,112 +116,47 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                         {chunkArray(hands, 2).map((handsRow, rowIdx) => (
                             <div key={rowIdx} style={{ display: "flex", gap: compact ? 10 : 36, marginBottom: compact ? 6 : 18, justifyContent: "center" }}>
                                 {handsRow.map((hand, idxInRow) => {
-                                    const idx = rowIdx * 2 + idxInRow;
-                                    // Determine highlight color for attacker/defender
-                                    let borderColor = "none";
-                                    let boxShadow = compact ? "0 2px 8px 0 #a5b4fc33" : "0 4px 24px 0 #a5b4fc66";
-                                    if (attacker === idx) {
-                                        borderColor = "#f59e42";
-                                        boxShadow = "0 0 0 4px #fde68a, 0 2px 8px 0 #a5b4fc33";
-                                    } else if (defender === idx) {
-                                        borderColor = "#3b82f6";
-                                        boxShadow = "0 0 0 4px #93c5fd, 0 2px 8px 0 #a5b4fc33";
-                                    }
-                                    // Highlight current player with background only if not attacker/defender
-                                    const isCurrent = typeof curr_player === "number" && curr_player === idx;
-                                    const highlightBg = isCurrent ? "#ffe066" : "rgba(255,255,255,0.95)";
+                                    const playerIdx = rowIdx * 2 + idxInRow;
+                                    const isCurrent = curr_player === playerIdx;
                                     return (
                                         <div
-                                            key={idx}
+                                            key={playerIdx}
                                             style={{
-                                                border: borderColor === "none" ? "none" : `3px solid ${borderColor}`,
-                                                borderRadius: 12,
-                                                padding: boxPad,
-                                                background: highlightBg,
-                                                boxShadow,
-                                                minWidth: minHandWidth,
+                                                border: isCurrent ? "3px solid #f59e42" : "2px solid #e5e7eb",
+                                                boxShadow: isCurrent ? "0 0 12px 2px #f59e4288" : undefined,
+                                                borderRadius: 10,
+                                                background: isCurrent ? "#fff7ed" : "#f8fafc",
+                                                padding: compact ? 4 : 12,
+                                                minWidth: 90,
+                                                minHeight: 60,
                                                 display: "flex",
                                                 flexDirection: "column",
                                                 alignItems: "center",
-                                                maxHeight: maxHandBoxHeight,
-                                                transition: "background 0.2s",
+                                                transition: "box-shadow 0.2s, border 0.2s, background 0.2s",
                                             }}
                                         >
-                                            <h3
-                                                style={{
-                                                    fontWeight: 600,
-                                                    fontSize: h3Font,
-                                                    color:
-                                                        attacker === idx
-                                                            ? "#f59e42"
-                                                            : defender === idx
-                                                                ? "#3b82f6"
-                                                                : "#6366f1",
-                                                    marginBottom: compact ? 6 : 16,
-                                                    letterSpacing: 0.5,
-                                                }}
-                                            >
-                                                {`Player ${idx + 1} (${bots && bots[idx] ? bots[idx] : "?"})`}
-                                                {attacker === idx && (
-                                                    <span style={{ color: "#f59e42", marginLeft: 6, fontWeight: 700 }}>
-                                                        (Attacker)
-                                                    </span>
-                                                )}
-                                                {defender === idx && (
-                                                    <span style={{ color: "#3b82f6", marginLeft: 6, fontWeight: 700 }}>
-                                                        (Defender)
-                                                    </span>
-                                                )}
-                                                {isCurrent && (
-                                                    <span style={{ color: "#f59e42", marginLeft: 6, fontWeight: 700, fontSize: 13 }}>
-                                                        (Current)
-                                                    </span>
-                                                )}
-                                            </h3>
-                                            {/* Show status if available */}
-                                            {status && status[idx] && (
-                                                <div style={{
-                                                    color: "#0ea5e9",
-                                                    fontWeight: 500,
-                                                    fontSize: compact ? 11 : 15,
-                                                    marginBottom: compact ? 2 : 6,
-                                                }}>
-                                                    Status: {status[idx]}
-                                                </div>
-                                            )}
-                                            {/* HAND CARDS WRAPPED IN ROWS OF 4 */}
-                                            <div style={{ display: "flex", flexDirection: "column", gap: compact ? 2 : 8, marginBottom: compact ? 6 : 18 }}>
-                                                {Array.from({ length: Math.ceil(hand.length / 4) }).map((_, rowIdx) => (
-                                                    <div key={rowIdx} style={{ display: "flex", gap: compact ? 4 : 12, justifyContent: "center" }}>
-                                                        {hand.slice(rowIdx * 4, rowIdx * 4 + 4).map((card, cidx) => (
-                                                            <div
-                                                                key={cidx}
-                                                                style={{
-                                                                    border: "none",
-                                                                    borderRadius: 7,
-                                                                    padding: cardPad,
-                                                                    background: "linear-gradient(120deg, #f1f5f9 60%, #c7d2fe 100%)",
-                                                                    fontSize: cardFont,
-                                                                    boxShadow: compact ? "0 1px 3px #a5b4fc33" : "0 2px 8px #a5b4fc55",
-                                                                    color:
-                                                                        card && (card.includes("♥") || card.includes("♦"))
-                                                                            ? "#e11d48"
-                                                                            : "#1e293b",
-                                                                    fontWeight: 500,
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    justifyContent: "center",
-                                                                    minWidth: compact ? 18 : 36,
-                                                                    minHeight: minHandHeight,
-                                                                    transition: "transform 0.1s",
-                                                                }}
-                                                            >
-                                                                {card}
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                            <div style={{ fontWeight: 700, color: isCurrent ? "#f59e42" : "#222", marginBottom: 4 }}>
+                                                Player {playerIdx + 1} {bots && bots[playerIdx] ? `(${bots[playerIdx]})` : ""}
+                                                {isCurrent && <span style={{ marginLeft: 6, fontSize: 13, color: "#f59e42" }}>(Current)</span>}
+                                            </div>
+                                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                                {hand.map((card, cidx) => (
+                                                    <span key={cidx} style={{
+                                                        border: "1.5px solid #cbd5e1",
+                                                        borderRadius: 5,
+                                                        background: "#fff",
+                                                        padding: compact ? "1px 5px" : "3px 10px",
+                                                        fontSize: compact ? 15 : 22,
+                                                        fontWeight: 600,
+                                                        color: card && (card.includes("♥") || card.includes("♦")) ? "#e11d48" : "#222",
+                                                        marginRight: 2,
+                                                        marginBottom: 2,
+                                                    }}>{card}</span>
                                                 ))}
                                             </div>
+                                            {status && status[playerIdx] && (
+                                                <div style={{ fontSize: 12, color: "#6366f1", marginTop: 2 }}>{status[playerIdx]}</div>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -398,20 +333,22 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                         key={idx}
                                         style={{
                                             flex: 1,
-                                            background: "#f1f5f9",
-                                            border: "1px solid #e5e7eb",
+                                            background: curr_player === idx ? "#fff7ed" : "#f1f5f9",
+                                            border: curr_player === idx ? "2.5px solid #f59e42" : "1px solid #e5e7eb",
                                             borderRadius: 7,
                                             height: logHeight,
                                             overflowY: "auto",
                                             padding: compact ? 4 : 12,
                                             fontSize: compact ? 11 : 15,
                                             boxSizing: "border-box",
-                                            boxShadow: compact ? "0 1px 2px #a5b4fc11" : "0 1px 4px #a5b4fc22",
+                                            boxShadow: curr_player === idx ? "0 0 8px 1px #f59e4288" : (compact ? "0 1px 2px #a5b4fc11" : "0 1px 4px #a5b4fc22"),
                                             minWidth: 0,
+                                            transition: "box-shadow 0.2s, border 0.2s, background 0.2s",
                                         }}
                                     >
-                                        <div style={{ color: "#6366f1", fontWeight: 600, fontSize: compact ? 12 : 15, marginBottom: 4 }}>
+                                        <div style={{ color: curr_player === idx ? "#f59e42" : "#6366f1", fontWeight: 600, fontSize: compact ? 12 : 15, marginBottom: 4 }}>
                                             Player {idx + 1} {bots && bots[idx] ? `(${bots[idx]})` : ""}
+                                            {curr_player === idx && <span style={{ marginLeft: 6, fontSize: 13, color: "#f59e42" }}>(Current)</span>}
                                         </div>
                                         {botLog && botLog.length > 0
                                             ? botLog.slice().reverse().map((entry, eidx) => (

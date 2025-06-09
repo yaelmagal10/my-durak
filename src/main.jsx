@@ -451,6 +451,7 @@ function GamePage({ onBack, selectedBots }) {
                         deck_count={gameState.state.deck_count}
                         trump_card={gameState.state.trump_card}
                         num_of_burned_cards={gameState.state.num_of_burned_cards}
+                        curr_player={gameState.state.curr_player}
                     />
                     <div style={{ marginTop: 12 }}>
                         {playMode === "step" && (
