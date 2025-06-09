@@ -2,24 +2,35 @@
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import CardGameUI from "./CardGameUI";
+import TournamentUI from "./TournamentUI";
+
+console.log("[main.jsx] App loaded");
 
 const API_URL = "http://127.0.0.1:8000/api";
 
-function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedBots, numPlayers, setNumPlayers, botCounts, setBotCounts }) {
+function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedBots, numPlayers, setNumPlayers, botCounts, setBotCounts, setShowTournament }) {
     const [botFile, setBotFile] = useState(null);
     const [botName, setBotName] = useState("");
     const [error, setError] = useState("");
 
     // Fetch bots from backend
     useEffect(() => {
+        console.log("[BotManagerPage] Fetching bots from backend...");
         fetch(`${API_URL}/bots`)
             .then(res => res.json())
-            .then(data => setBots(data))
-            .catch(() => setBots([]));
+            .then(data => {
+                setBots(data);
+                console.log("[BotManagerPage] Bots fetched:", data);
+            })
+            .catch((err) => {
+                setBots([]);
+                console.log("[BotManagerPage] Failed to fetch bots", err);
+            });
     }, [setBots]);
 
     // Upload bot to backend
     const handleUpload = async () => {
+        console.log("[BotManagerPage] Uploading bot", botName, botFile);
         if (!botFile || !botName) {
             setError("Please select a file and enter a bot name.");
             return;
@@ -35,16 +46,16 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
             setBots(await botsResp.json());
             setBotFile(null);
             setBotName("");
+            console.log("[BotManagerPage] Bot uploaded successfully");
         } catch (e) {
-            //setError(e.message || "Failed to upload bot");
             setError("Failed to upload bot. Please ensure the file is a valid Python script.");
+            console.log("[BotManagerPage] Bot upload failed", e);
         }
     };
 
     // Update bot counts when bots or numPlayers changes
     useEffect(() => {
         if (bots.length === 0) return;
-        // Reset counts if bots or numPlayers changes
         setBotCounts((prev) => {
             const newCounts = {};
             bots.forEach(bot => {
@@ -52,6 +63,7 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
             });
             return newCounts;
         });
+        console.log("[BotManagerPage] Bot counts updated", bots);
     }, [bots, numPlayers, setBotCounts]);
 
     // Calculate total selected players
@@ -66,6 +78,7 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
             }
         });
         setSelectedBots(arr);
+        console.log("[BotManagerPage] Selected bots array updated", arr);
     }, [botCounts, bots, setSelectedBots]);
 
     return (
@@ -126,13 +139,21 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
                     ))}
                 </ul>
             </div>
-            <button
-                style={{ marginTop: 24, padding: "10px 32px", fontSize: 20, borderRadius: 8 }}
-                disabled={totalSelected !== numPlayers || numPlayers < 2}
-                onClick={onStartGame}
-            >
-                Start Game
-            </button>
+            <div>
+                <button
+                    style={{ margin: 24, padding: "10px 32px", fontSize: 20, borderRadius: 8 }}
+                    disabled={totalSelected !== numPlayers || numPlayers < 2}
+                    onClick={onStartGame}
+                >
+                    Start Game
+                </button>
+                <button
+                    style={{ margin: 24, padding: "10px 32px", fontSize: 20, borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", marginLeft: 16 }}
+                    onClick={() => setShowTournament(true)}
+                >
+                    Run Tournament
+                </button>
+            </div>
         </div>
     );
 }
@@ -151,13 +172,17 @@ function GamePage({ onBack, selectedBots }) {
 
     useEffect(() => {
         if (!gameStarted || !selectedBots || selectedBots.length < 2) return;
+        console.log("[GamePage] Creating new game with bots:", selectedBots);
         fetch(`${API_URL}/games`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(selectedBots)
         })
             .then(res => res.json())
-            .then(setGameState);
+            .then(data => {
+                setGameState(data);
+                console.log("[GamePage] Game created, state:", data);
+            });
     }, [selectedBots, gameStarted]);
 
     // When switching to auto, finish the game from current state
@@ -169,7 +194,6 @@ function GamePage({ onBack, selectedBots }) {
             while (
                 state &&
                 state.state &&
-                // You may want to adjust this condition to match your game's end condition
                 state.state.hands.filter(h => h.length > 0).length > 1
             ) {
                 const resp = await fetch(`${API_URL}/games/${state.id}/step`, { method: "POST" });
@@ -177,13 +201,12 @@ function GamePage({ onBack, selectedBots }) {
                 if (cancelled) return;
                 setGameState(data);
                 state = data;
-                // Wait for the selected speed before next step
+                console.log("[GamePage] Auto step, new state:", data);
                 await new Promise(res => setTimeout(res, autoSpeed));
             }
         }
         autoStep();
         return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [playMode, gameState?.id, gameStarted, autoSpeed]);
 
     const handleNextStep = async () => {
@@ -191,6 +214,7 @@ function GamePage({ onBack, selectedBots }) {
         const resp = await fetch(`${API_URL}/games/${gameState.id}/step`, { method: "POST" });
         const data = await resp.json();
         setGameState(data);
+        console.log("[GamePage] Step button pressed, new state:", data);
     };
 
     // Helper: get winner and loser indices
@@ -458,6 +482,17 @@ function App() {
     const [selectedBots, setSelectedBots] = useState([]);
     const [numPlayers, setNumPlayers] = useState(2);
     const [botCounts, setBotCounts] = useState({});
+    const [showTournament, setShowTournament] = useState(false);
+
+    useEffect(() => {
+        console.log("[App] App mounted");
+    }, []);
+
+    if (showTournament) {
+        return (
+            <TournamentUI bots={bots} onBack={() => setShowTournament(false)} />
+        );
+    }
 
     return (
         page === "bots"
@@ -471,6 +506,7 @@ function App() {
                 setNumPlayers={setNumPlayers}
                 botCounts={botCounts}
                 setBotCounts={setBotCounts}
+                setShowTournament={setShowTournament}
             />
             : <GamePage
                 onBack={() => setPage("bots")}
