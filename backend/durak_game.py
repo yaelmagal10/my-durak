@@ -144,8 +144,8 @@ def init_deck() -> List[Tuple[int, int]]:
     return deck
 
 
-def real_cards(card_lst: List[Optional[Tuple[int, int]]]) -> List[Tuple[int, int]]:
-    return [card for card in card_lst if card is not None]
+def real_cards(card_list: List[Optional[Tuple[int, int]]]) -> List[Tuple[int, int]]:
+    return [card for card in card_list if card is not None]
 
 
 def attack_vector(
@@ -267,17 +267,41 @@ def defend_with_card_list(
     return successful_defending_cards, successful_index_list
 
 
+def forward_with_card_list(
+    forwarding_card_list: List[Tuple[int, int]],
+    attack: List[Optional[Tuple[int, int]]],
+    forwarding_hand: List[Tuple[int, int]],
+    num_of_allowed_forwarding_cards: int,
+) -> List[Tuple[int, int]]:
+    successful_forwarding_card_list = []
+    for card in forwarding_card_list:
+        if num_of_allowed_forwarding_cards <= 0:
+            break
+        if card not in forwarding_hand:
+            print("line 281: forwarding card not in hand")
+            continue
+        if card[0] != attack[0][0]:
+            print("line 284: invalid forwarding")
+            continue
+        forwarding_hand.remove(card)
+        attack[attack.index(None)] = card  # Place card in the first available slot
+        successful_forwarding_card_list.append(card)
+        num_of_allowed_forwarding_cards -= 1
+
+    return successful_forwarding_card_list
+
+
 def attack_with_card_list(
     attack: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
-    attacking_card_lst: List[Tuple[int, int]],
+    attacking_card_list: List[Tuple[int, int]],
     attacking_hand: List[Tuple[int, int]],
 ) -> int:
     if attack and all(card is not None for card in attack):
         return []
     # attack_vec = attack_vector(attack, defence)
     successful_attacking_cards = []
-    for card in attacking_card_lst:
+    for card in attacking_card_list:
         if card not in attacking_hand:
             print("line 200: attacking card not in hand")
             continue
@@ -477,14 +501,12 @@ def advance_game_step(
                 elif action[0] == Output_actions.FORWARD:
                     num_of_allowed_forwarding_cards = min(
                         max_attack_size,
-                        len(hands[(defender + 1) % num_of_players]),  # YOAD
+                        len(hands[(defender + 1) % num_of_players]),
                     ) - len(real_cards(table_attack))
                     if (
-                        table_defence[0] != None
+                        any(c is not None for c in table_defence)
                         or num_of_allowed_forwarding_cards <= 0
                         or not valid_action_format(action)
-                        or table_defence
-                        and any(card is not None for card in table_defence)
                     ):
                         take(
                             bots,
@@ -498,8 +520,35 @@ def advance_game_step(
                         is_defence_succesful = False
                         add_log(defender, f"Player {defender+1} took cards")
                     else:
-                        forwarding_cards = action[1]
-                        if len(forwarding_cards) > num_of_allowed_forwarding_cards:
+                        forwarding_card_list = action[1]
+                        successful_forwarding_card_list = forward_with_card_list(
+                            forwarding_card_list,
+                            table_attack,
+                            hands[defender],
+                            num_of_allowed_forwarding_cards,
+                        )
+                        if len(successful_forwarding_card_list) > 0:
+                            inform_all(
+                                bots,
+                                (
+                                    Input_actions.FORWARD_PASSIVE,
+                                    defender,
+                                    successful_forwarding_card_list,
+                                ),
+                                bot_states,
+                            )
+                            add_log(
+                                defender,
+                                f"Player {defender+1} forwarded cards {card_list_tuples_to_strs(successful_forwarding_card_list)}",
+                            )
+                            defender = (defender + 1) % num_of_players
+                            curr_player = (
+                                defender - 1
+                            ) % num_of_players  # because defender is now the next player (current player will be incremented at the end of this function)
+                        else:
+                            print(
+                                f"line {get_line()}: No valid forwarding cards, taking cards"
+                            )
                             take(
                                 bots,
                                 defender,
@@ -511,42 +560,6 @@ def advance_game_step(
                             end_of_round = True
                             is_defence_succesful = False
                             add_log(defender, f"Player {defender+1} took cards")
-                        else:
-                            for card in forwarding_cards:
-                                if card not in hands[defender] or card[0] not in [
-                                    c[0] for c in table_attack if c is not None
-                                ]:
-                                    take(
-                                        bots,
-                                        defender,
-                                        table_attack,
-                                        table_defence,
-                                        hands[defender],
-                                        bot_states,
-                                    )
-                                    end_of_round = True
-                                    is_defence_succesful = False
-                                    add_log(defender, f"Player {defender+1} took cards")
-                                    break
-                                else:
-                                    table_attack.append(forwarding_cards)
-                                    hands[defender].remove(forwarding_cards)
-                                    inform_all(
-                                        bots,
-                                        (
-                                            Input_actions.FORWARD_PASSIVE,
-                                            defender,
-                                            forwarding_cards,
-                                        ),
-                                        bot_states,
-                                    )
-                                    table_attack.append(forwarding_cards)
-                                    defender = (defender + 1) % num_of_players
-                                    curr_player = defender
-                                    add_log(
-                                        defender,
-                                        f"Player {defender+1} forwarded cards {card_list_tuples_to_strs(forwarding_cards)}",
-                                    )
                 else:
                     take(
                         bots,
@@ -733,7 +746,7 @@ def advance_game_step(
         table_attack = []
         table_defence = []
         attacker = defender if is_defence_succesful else (defender + 1) % num_of_players
-        defender = (attacker + 1) % num_of_players  # YOAD
+        defender = (attacker + 1) % num_of_players
         curr_player = attacker  # Reset current player to the new attacker
         # Update winners and remove them from the round
         update_winners_and_remove()
