@@ -1,3 +1,4 @@
+//before change
 // filepath: src/App.jsx
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
@@ -82,77 +83,174 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
     }, [botCounts, bots, setSelectedBots]);
 
     return (
-        <div style={{ margin: 32 }}>
-            <h2>Upload Python Bot</h2>
-            <input
-                type="text"
-                placeholder="Bot Name"
-                value={botName}
-                onChange={e => setBotName(e.target.value)}
-                style={{ marginRight: 8 }}
-            />
-            <input
-                type="file"
-                accept=".py"
-                onChange={e => setBotFile(e.target.files[0])}
-                style={{ marginRight: 8 }}
-            />
-            <button onClick={handleUpload}>Upload Bot</button>
-            {error && <div style={{ color: "red" }}>{error}</div>}
-            <hr style={{ margin: "24px 0" }} />
-            <h3>Game Setup</h3>
-            <div style={{ marginBottom: 16 }}>
-                <label>
-                    Number of Players:&nbsp;
+        <div style={{
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, #e0e7ff 0%, #f8fafc 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            fontFamily: "'Segoe UI', 'Roboto', 'Arial', sans-serif",
+            padding: 0,
+        }}>
+            <div style={{
+                marginTop: 48,
+                background: 'rgba(255,255,255,0.97)',
+                borderRadius: 18,
+                boxShadow: '0 4px 32px #6366f133',
+                padding: '36px 40px 32px 40px',
+                minWidth: 380,
+                maxWidth: 480,
+                width: '100%',
+                border: '1.5px solid #e0e7ff',
+            }}>
+                <h2 style={{ fontSize: 32, fontWeight: 800, color: '#6366f1', marginBottom: 18, letterSpacing: 1 }}>Upload Python Bot</h2>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
                     <input
-                        type="number"
-                        min={2}
-                        max={bots.length * 4}
-                        value={numPlayers}
-                        onChange={e => setNumPlayers(Number(e.target.value))}
-                        style={{ width: 60, fontSize: 16 }}
+                        type="text"
+                        placeholder="Bot Name"
+                        value={botName}
+                        onChange={e => setBotName(e.target.value)}
+                        style={{
+                            flex: 1,
+                            padding: '10px 14px',
+                            fontSize: 17,
+                            borderRadius: 8,
+                            border: '1.5px solid #c7d2fe',
+                            outline: 'none',
+                            background: '#f1f5f9',
+                            marginRight: 0,
+                        }}
                     />
-                </label>
-            </div>
-            <div>
-                <b>Choose how many of each bot:</b>
-                <ul>
-                    {bots.map((bot, idx) => (
-                        <li key={bot.filename}>
-                            <span style={{ marginRight: 8 }}>{bot.name}</span>
-                            <input
-                                type="number"
-                                min={0}
-                                max={numPlayers}
-                                value={botCounts[bot.filename] || 0}
-                                onChange={e => {
-                                    let val = Number(e.target.value);
-                                    // Clamp so total does not exceed numPlayers
-                                    const otherTotal = totalSelected - (botCounts[bot.filename] || 0);
-                                    if (val < 0) val = 0;
-                                    if (val > numPlayers - otherTotal) val = numPlayers - otherTotal;
-                                    setBotCounts({ ...botCounts, [bot.filename]: val });
-                                }}
-                                style={{ width: 40, fontSize: 16 }}
-                            />
-                        </li>
-                    ))}
-                </ul>
-            </div>
-            <div>
-                <button
-                    style={{ margin: 24, padding: "10px 32px", fontSize: 20, borderRadius: 8 }}
-                    disabled={totalSelected !== numPlayers || numPlayers < 2}
-                    onClick={onStartGame}
-                >
-                    Start Game
-                </button>
-                <button
-                    style={{ margin: 24, padding: "10px 32px", fontSize: 20, borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", marginLeft: 16 }}
-                    onClick={() => setShowTournament(true)}
-                >
-                    Run Tournament
-                </button>
+                    <input
+                        type="file"
+                        accept=".py"
+                        onChange={e => setBotFile(e.target.files[0])}
+                        style={{
+                            flex: 1,
+                            fontSize: 15,
+                            borderRadius: 8,
+                            border: '1.5px solid #c7d2fe',
+                            background: '#f1f5f9',
+                            padding: '8px 0',
+                        }}
+                    />
+                    <button
+                        onClick={handleUpload}
+                        style={{
+                            padding: '10px 18px',
+                            fontSize: 16,
+                            borderRadius: 8,
+                            background: '#6366f1',
+                            color: '#fff',
+                            border: 'none',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 8px #6366f122',
+                            transition: 'background 0.2s',
+                        }}
+                    >
+                        Upload Bot
+                    </button>
+                </div>
+                {error && <div style={{ color: "#e11d48", fontWeight: 600, marginBottom: 10 }}>{error}</div>}
+                <hr style={{ margin: "24px 0", border: 'none', borderTop: '1.5px solid #e0e7ff' }} />
+                <h3 style={{ fontSize: 22, fontWeight: 700, color: '#3b3b5c', marginBottom: 18 }}>Game Setup</h3>
+                <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <label style={{ fontWeight: 500, fontSize: 17, color: '#222' }}>
+                        Number of Players:&nbsp;
+                        <input
+                            type="number"
+                            min={2}
+                            max={bots.length * 4}
+                            value={numPlayers}
+                            onChange={e => setNumPlayers(Number(e.target.value))}
+                            style={{
+                                width: 60,
+                                fontSize: 17,
+                                borderRadius: 7,
+                                border: '1.5px solid #c7d2fe',
+                                background: '#f1f5f9',
+                                padding: '6px 8px',
+                                marginLeft: 4,
+                            }}
+                        />
+                    </label>
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                    <b style={{ fontSize: 16, color: '#222' }}>Choose how many of each bot:</b>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        {bots.map((bot, idx) => (
+                            <li key={bot.filename} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ marginRight: 10, fontWeight: 500, color: '#6366f1', minWidth: 90 }}>{bot.name}</span>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={numPlayers}
+                                    value={botCounts[bot.filename] || 0}
+                                    onChange={e => {
+                                        let val = Number(e.target.value);
+                                        const otherTotal = totalSelected - (botCounts[bot.filename] || 0);
+                                        if (val < 0) val = 0;
+                                        if (val > numPlayers - otherTotal) val = numPlayers - otherTotal;
+                                        setBotCounts({ ...botCounts, [bot.filename]: val });
+                                    }}
+                                    style={{
+                                        width: 48,
+                                        fontSize: 16,
+                                        borderRadius: 7,
+                                        border: '1.5px solid #c7d2fe',
+                                        background: '#f1f5f9',
+                                        padding: '6px 8px',
+                                    }}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32, gap: 18 }}>
+                    <button
+                        style={{
+                            flex: 1,
+                            margin: 0,
+                            padding: '14px 0',
+                            fontSize: 20,
+                            borderRadius: 10,
+                            background: '#6366f1',
+                            color: '#fff',
+                            border: 'none',
+                            fontWeight: 700,
+                            cursor: totalSelected !== numPlayers || numPlayers < 2 ? 'not-allowed' : 'pointer',
+                            opacity: totalSelected !== numPlayers || numPlayers < 2 ? 0.5 : 1,
+                            boxShadow: '0 2px 8px #6366f122',
+                            transition: 'background 0.2s',
+                        }}
+                        disabled={totalSelected !== numPlayers || numPlayers < 2}
+                        onClick={onStartGame}
+                    >
+                        Start Game
+                    </button>
+                    <button
+                        style={{
+                            flex: 1,
+                            margin: 0,
+                            padding: '14px 0',
+                            fontSize: 20,
+                            borderRadius: 10,
+                            background: '#7c3aed',
+                            color: '#fff',
+                            border: 'none',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            marginLeft: 18,
+                            boxShadow: '0 2px 8px #7c3aed22',
+                            transition: 'background 0.2s',
+                        }}
+                        onClick={() => setShowTournament(true)}
+                    >
+                        Run Tournament
+                    </button>
+                </div>
             </div>
         </div>
     );
