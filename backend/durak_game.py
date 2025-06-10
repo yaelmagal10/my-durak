@@ -91,8 +91,10 @@ def valid_card_format(card: Any) -> bool:
 
 
 def valid_card_list_format(card_list: Any) -> bool:
-    return isinstance(card_list, list) and all(
-        valid_card_format(card) for card in card_list
+    return (
+        isinstance(card_list, list)
+        and len(card_list) <= MAX_ATTACK_SIZE_AFTER_BURN
+        and all(valid_card_format(card) for card in card_list)
     )
 
 
@@ -105,19 +107,20 @@ def valid_action_format(action: Any) -> bool:
         if len(action) != 2:
             return False
         card_list = action[1]
-        if not isinstance(card_list, list):
-            return False
         return valid_card_list_format(card_list)
     if action_kind == Output_actions.DEFEND:
         if len(action) != 3:
             return False
         card_list = action[1]
         index_list = action[2]
+        if not valid_card_list_format(card_list) or not isinstance(index_list, list):
+            return False
         if len(card_list) != len(index_list):
             return False
-        return valid_card_list_format(card_list) and all(
-            isinstance(index, int) and index >= 0 for index in index_list
-        )
+        if not all(isinstance(i, int) and 0 <= i for i in index_list):
+            return False
+        return True
+
     if action_kind == Output_actions.TAKE:
         return len(action) == 1
     if action_kind == Output_actions.PASS:
@@ -198,14 +201,35 @@ def take(
     print(f"actual hand: {player_hand}")
 
 
-def defend(
-    index: int,
-    attack: List[Optional[Tuple[int, int]]],
-    defence: List[Optional[Tuple[int, int]]],
-    defending_card: Tuple[int, int],
-    defending_hand: List[Tuple[int, int]],
-    kozar_suit: int,
+# result = bots[curr_player].__call__(
+#     (Input_actions.DEFENCE,),
+#     hand,
+#     attack_card,
+#     trump_suit,
+#     bot_states[curr_player],
+# )
+
+
+# if defend(
+#     action[2][0],
+#     table_attack,
+#     table_defence,
+#     action[1][0],
+#     hands[curr_player],
+#     trump_suit,
+# ):
+
+
+def defend_with_one_card(
+    index: int,  # Index in the defence table
+    attack: List[Optional[Tuple[int, int]]],  # Current attack vector
+    defence: List[Optional[Tuple[int, int]]],  # Current defence vector
+    defending_card: Tuple[int, int],  # Card to defend with
+    defending_hand: List[Tuple[int, int]],  # Hand of the defending player
+    kozar_suit: int,  # Suit of the kozar card (trump suit)
 ) -> int:
+    if not isinstance(index, int):
+        return 0
     if defending_card not in defending_hand:
         return 0
     if (
@@ -223,33 +247,49 @@ def defend(
     return 1
 
 
-def attack_action(
-    attack_pointer: List[Optional[Tuple[int, int]]],
+# assuming the parameters passed the valid_action_format check
+def defend_with_card_list(
+    index_list: List[int],  # Indices in the defence table
+    defending_card_list: List[Tuple[int, int]],  # Card list to defend with
+    attack: List[Optional[Tuple[int, int]]],  # Current attack vector
+    defence: List[Optional[Tuple[int, int]]],  # Current defence vector
+    defending_hand: List[Tuple[int, int]],  # Hand of the defending player
+    kozar_suit: int,  # Suit of the kozar card (trump suit)
+) -> List[Tuple[int, int]]:
+    successful_defending_cards = []
+    successful_index_list = []
+    for index, card in zip(index_list, defending_card_list):
+        if defend_with_one_card(
+            index, attack, defence, card, defending_hand, kozar_suit
+        ):
+            successful_defending_cards.append(card)
+            successful_index_list.append(index)
+    return successful_defending_cards, successful_index_list
+
+
+def attack_with_card_list(
+    attack: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
     attacking_card_lst: List[Tuple[int, int]],
     attacking_hand: List[Tuple[int, int]],
 ) -> int:
-    if attack_pointer and all(card is not None for card in attack_pointer):
-        return 0
+    if attack and all(card is not None for card in attack):
+        return []
     # attack_vec = attack_vector(attack, defence)
-    count_attacks = 0
+    successful_attacking_cards = []
     for card in attacking_card_lst:
         if card not in attacking_hand:
             print("line 200: attacking card not in hand")
             continue
-        if attack_pointer and all(c is not None for c in attack_pointer):
-            continue
-        if not valid_to_attack(card, attack_pointer, defence):
+        if not valid_to_attack(card, attack, defence):
             print("line 205: invalid attack")
             continue
-        attacking_index = attack_pointer.index(
-            None
-        )  # First index available for attacking
+        attacking_index = attack.index(None)  # First index available for attacking
         attacking_hand.remove(card)
-        attack_pointer[attacking_index] = card
-        count_attacks += 1
-    print(f"line {get_line()}: attack success")
-    return count_attacks
+        attack[attacking_index] = card
+        successful_attacking_cards.append(card)
+    # print(f"line {get_line()}: attack success")
+    return successful_attacking_cards
 
 
 def make_table_size_of_max_attack_size(
@@ -396,27 +436,30 @@ def advance_game_step(
             if valid_action_format(action):
                 print(f"line {get_line()}: Defender action is valid")
                 if action[0] == Output_actions.DEFEND:
-                    if defend(
-                        action[2][0],
-                        table_attack,
-                        table_defence,
-                        action[1][0],
-                        hands[curr_player],
-                        trump_suit,
-                    ):
+                    successful_defending_cards, successful_index_list = (
+                        defend_with_card_list(
+                            action[2],
+                            action[1],
+                            table_attack,
+                            table_defence,
+                            hands[curr_player],
+                            trump_suit,
+                        )
+                    )
+                    if len(successful_defending_cards) > 0:
                         inform_all(
                             bots,
                             (
                                 Input_actions.DEFENCE_PASSIVE,
                                 curr_player,
-                                action[1][0],
-                                action[2][0],
+                                successful_defending_cards,
+                                successful_index_list,
                             ),
                             bot_states,
                         )
                         add_log(
                             curr_player,
-                            f"Player {curr_player+1} defended with {card_tuple_to_str(action[1][0])}",
+                            f"Player {curr_player+1} defended with {card_list_tuples_to_strs(successful_defending_cards)}",
                         )
                     else:
                         take(
@@ -568,33 +611,38 @@ def advance_game_step(
         is_succesful_attack = False
         if all(card is None for card in table_attack):
             if valid_action_format(action) and action[0] == Output_actions.ATTACK:
-                is_succesful_attack = attack_action(
+                successful_attacking_cards = attack_with_card_list(
                     table_attack, table_defence, action[1], hands[curr_player]
                 )
+                is_succesful_attack = len(successful_attacking_cards) > 0
             if is_succesful_attack:
                 inform_all(
                     bots,
-                    (Input_actions.FIRST_ATTACK_PASSIVE, curr_player, action[1]),
+                    (
+                        Input_actions.FIRST_ATTACK_PASSIVE,
+                        curr_player,
+                        successful_attacking_cards,
+                    ),
                     bot_states,
                 )
                 add_log(
                     curr_player,
-                    f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(action[1])}",
+                    f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
                 )
             if not is_succesful_attack:
                 print("line 476: invalid first attack action")
                 # If this is the first attack (all table_attack are None), pick a random card from hand and attack with it
                 if hands[curr_player]:
-                    random_card = choice(
-                        [c for c in hands[curr_player] if c is not None]
-                    )
+                    random_card = choice(hands[curr_player])
                     print(
                         f"line {get_line()}: Forcing attack with random card from hand: {random_card}"
                     )
-                    res = attack_action(
+                    card_singelton: List[Tuple[int, int]] = attack_with_card_list(
                         table_attack, table_defence, [random_card], hands[curr_player]
                     )
-                    assert res == 1, "Forced attack should always succeed"
+                    assert card_singelton == [
+                        random_card
+                    ], "Forced attack should always succeed"
                     inform_all(
                         bots,
                         (
@@ -606,20 +654,24 @@ def advance_game_step(
                     )
                     add_log(
                         curr_player,
-                        f"Player {curr_player+1} attacked with {card_tuple_to_str(random_card)} (forced random)",
+                        f"Player {curr_player+1} attacked with {card_list_tuples_to_strs([random_card])} (forced random)",
                     )
                 else:
-                    print(f"line {get_line()}: No cards to attack with")
                     print(
-                        "THIS SHOULD NOT HAPPEN"
-                    )  # YOAD: This is related to the end game  where the player who starts the attack has no cards.
+                        f"line {get_line()}: No cards to attack with in the first attack"
+                    )
+                    raise ValueError(
+                        f"Player {curr_player+1} has no cards to attack with in the first attack"
+                    )
+                    print("THIS SHOULD NOT HAPPEN")
 
         # The regular attack case: player can attack with 0 or more cards.
         else:
             if valid_action_format(action) and action[0] == Output_actions.ATTACK:
-                is_succesful_attack = attack_action(
+                successful_attacking_cards = attack_with_card_list(
                     table_attack, table_defence, action[1], hands[curr_player]
                 )
+                is_succesful_attack = len(successful_attacking_cards) > 0
 
             if is_succesful_attack:
                 inform_all(
@@ -627,13 +679,13 @@ def advance_game_step(
                     (
                         Input_actions.OPTIONAL_ATTACK_PASSIVE,
                         curr_player,
-                        action[1],
+                        successful_attacking_cards,
                     ),
                     bot_states,
                 )
                 add_log(
                     curr_player,
-                    f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(action[1])}",
+                    f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
                 )
             else:
                 inform_all(

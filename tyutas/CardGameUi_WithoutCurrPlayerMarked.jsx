@@ -1,7 +1,7 @@
 import React from "react";
 
 // CardGameUI expects props: hands, table_attack, table_defence, log, attacker, defender, bots, compact, status, deck_count, trump_card
-export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact, status, deck_count, trump_card, num_of_burned_cards, curr_player }) {
+export default function CardGameUI({ hands, table_attack, table_defence, log, attacker, defender, bots, compact, status, deck_count, trump_card, num_of_burned_cards }) {
     const pad = compact ? 10 : 32;
     const cardPad = compact ? "6px 8px" : "16px 18px";
     const cardFont = compact ? 16 : 24;
@@ -127,9 +127,6 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                         borderColor = "#3b82f6";
                                         boxShadow = "0 0 0 4px #93c5fd, 0 2px 8px 0 #a5b4fc33";
                                     }
-                                    // Highlight current player with background only if not attacker/defender
-                                    const isCurrent = typeof curr_player === "number" && curr_player === idx;
-                                    const highlightBg = isCurrent ? "#ffe066" : "rgba(255,255,255,0.95)";
                                     return (
                                         <div
                                             key={idx}
@@ -137,14 +134,13 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                                 border: borderColor === "none" ? "none" : `3px solid ${borderColor}`,
                                                 borderRadius: 12,
                                                 padding: boxPad,
-                                                background: highlightBg,
+                                                background: "rgba(255,255,255,0.95)",
                                                 boxShadow,
                                                 minWidth: minHandWidth,
                                                 display: "flex",
                                                 flexDirection: "column",
                                                 alignItems: "center",
                                                 maxHeight: maxHandBoxHeight,
-                                                transition: "background 0.2s",
                                             }}
                                         >
                                             <h3
@@ -170,11 +166,6 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                                 {defender === idx && (
                                                     <span style={{ color: "#3b82f6", marginLeft: 6, fontWeight: 700 }}>
                                                         (Defender)
-                                                    </span>
-                                                )}
-                                                {isCurrent && (
-                                                    <span style={{ color: "#f59e42", marginLeft: 6, fontWeight: 700, fontSize: 13 }}>
-                                                        (Current)
                                                     </span>
                                                 )}
                                             </h3>
