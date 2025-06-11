@@ -85,6 +85,7 @@ def load_bot(filepath):
     spec.loader.exec_module(module)
     # Try to get 'bot' instance, else fallback to module
     bot_instance = getattr(module, "bot", module)
+    print("dict(bot_instance)", (bot_instance).__dict__)
     return bot_instance
 
 
@@ -367,9 +368,9 @@ def tournament(num_of_games=10, to_print=False):
             print(f"Game {game_idx + 1} of {num_of_games}:")
 
         # Redirect stdout to avoid inner printing, # but still allow outer prints
-        sys.stdout = open(os.devnull, "w")
+        # sys.stdout = open(os.devnull, "w")
         loser = main(to_print=False)
-        sys.stdout = sys.__stdout__
+        # `sys.stdout = sys.__stdout__
         if loser != -1:
             if to_print:
                 print(f"Game {game_idx + 1} ended with loser: {loser}")
@@ -397,19 +398,19 @@ async def run_tournament(request: Request):
     sys_argv_backup = sys.argv
     sys.argv = ["main.py"] + bot_filenames
     # Redirect stdout to capture tournament output
-    old_stdout = sys.stdout
-    stdout_capture = io.StringIO()
-    sys.stdout = stdout_capture
+    # old_stdout = sys.stdout
+    # stdout_capture = io.StringIO()
+    # sys.stdout = stdout_capture
     try:
         loser_count_lst, num_of_infinite_games = tournament(
             num_of_games=num_games, to_print=True
         )
         # output = stdout_capture.getvalue()
     except Exception as e:
-        sys.stdout = old_stdout
-        sys.argv = sys_argv_backup
+        # sys.stdout = old_stdout
+        # sys.argv = sys_argv_backup
         return JSONResponse({"error": str(e)}, status_code=500)
-    sys.stdout = old_stdout
+    # sys.stdout = old_stdout
     sys.argv = sys_argv_backup
     # Count infinite games from output
     # infinite_games = 0

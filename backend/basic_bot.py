@@ -31,7 +31,7 @@ class BasicBot(AbstractBot):
 
     def defend(self) -> Tuple[List[Tuple[int, int]], List[int]]:
         # Try to defend with the lowest card that can beat the attack
-        attack_cards = self.get_attacking_table_cards()
+        attack_cards = self.get_table_attack()
         defence = []
         indexes = []
         for i, attack_card in enumerate(attack_cards):

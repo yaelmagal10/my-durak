@@ -1,9 +1,12 @@
 from abstract_bot import AbstractBot
 
+
 class BeginnerBot(AbstractBot):
     """A beginner bot that plays a simple strategy."""
-    
-    def game_init(self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple, table_cards: list):
+
+    def game_init(
+        self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple
+    ):
         print("BeginnerBot: game_init called")
         ordered_suits = [0, 1, 2, 3]
         ordered_suits[self.get_kozar_suit()] = 3
@@ -15,7 +18,7 @@ class BeginnerBot(AbstractBot):
         return [item for item in lst if item is not None]
 
     def optional_attack(self):
-        table_cards = self.get_attacking_table_cards() + self.get_defending_table_cards()
+        table_cards = self.get_table_attack() + self.get_table_defence()
         table_cards = self.remove_Nones(table_cards)
         table_numbers = [card[0] for card in table_cards]
         attacking_cards = []
@@ -29,7 +32,7 @@ class BeginnerBot(AbstractBot):
     def first_attack(self):
         """returns the lowest card in hand by the card order."""
         lowest_card = None
-        lowest_card_index = len(self.get_hand())
+        lowest_card_index = len(self.card_order)
         for card in self.get_hand():
             card_index = self.card_order.index(card)
             if card_index < lowest_card_index:
@@ -41,21 +44,27 @@ class BeginnerBot(AbstractBot):
                 continue
             if card[0] == lowest_card[0]:
                 attacking_cards.append(card)
+        print(f"BeginnerBot: first_attack called, attacking_cards: {attacking_cards}")
         return attacking_cards
 
     def defend(self):
-        if len(self.remove_Nones(self.get_defending_table_cards())) == 0:
+        if len(self.remove_Nones(self.get_table_defence())) == 0:
             defending_cards = []
             for card in self.get_hand():
-                if card[0] == self.get_attacking_table_cards()[0][0]:
+                if card[0] == self.get_table_attack()[0][0]:
                     defending_cards.append(card)
             if len(defending_cards) != 0:
                 return defending_cards, []
-        numbers_by_suit = [sorted([card[0] for card in self.get_hand() if card[1] == suit]) for suit in range(4)]
+        numbers_by_suit = [
+            sorted([card[0] for card in self.get_hand() if card[1] == suit])
+            for suit in range(4)
+        ]
         defending_cards = []
         indexes = []
-        for i, card in sorted(enumerate(self.get_attacking_table_cards()),
-                               key=lambda x: self.card_order.index(x[1]) if x[1] is not None else 53):
+        for i, card in sorted(
+            enumerate(self.get_table_attack()),
+            key=lambda x: self.card_order.index(x[1]) if x[1] is not None else 53,
+        ):
             if card is None:
                 continue
             succeess = False
@@ -68,12 +77,18 @@ class BeginnerBot(AbstractBot):
                     break
             if not succeess:
                 if len(numbers_by_suit[self.get_kozar_suit()]) > 0:
-                    defending_cards.append((numbers_by_suit[self.get_kozar_suit()][0], self.get_kozar_suit()))
+                    defending_cards.append(
+                        (
+                            numbers_by_suit[self.get_kozar_suit()][0],
+                            self.get_kozar_suit(),
+                        )
+                    )
                     indexes.append(i)
                     numbers_by_suit[self.get_kozar_suit()].pop(0)
                     succeess = True
             if not succeess:
                 return [], []
         return defending_cards, indexes
+
 
 bot: BeginnerBot = BeginnerBot()

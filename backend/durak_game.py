@@ -1,9 +1,8 @@
-from random import shuffle, choice, randint, choices
+from random import shuffle, choice
 from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
 
-get_line = lambda: currentframe().f_lineno
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
@@ -43,26 +42,31 @@ def card_str_to_tuple(card_str: Optional[str]) -> Optional[Tuple[int, int]]:
     return (RANKS.index(rank), SUITS.index(suit))
 
 
-def inform(player: Any, message: Any, state: Any = None) -> Any:
+def inform(player_bot: Any, message: Any, params: Tuple, state: Any) -> Any:
     # Provide default values for bot call signature
     # message, hand, table_or_attack_card, trump_suit, bot_state=None
     # For inform, only message and state are relevant, so pass None for others
     try:
-        return player.__call__(message, None, None, None, state)
-    except:
-        print(f"Error calling player {player}: {message}")
+        return player_bot.call(message, *params, state)
+    # except Exception as e:
+    except Exception as e:
+        print(f"\nline {currentframe().f_lineno}: Exception in inform call: {e}")
+        print(f"line 53: Error calling player {player_bot}: {message}\n")
         return None
 
 
 def inform_all(
-    player_list: List[Any], message: Any, states: Optional[List[Any]] = None
+    bot_list: List[Any],
+    message: Any,
+    params_list: List[Tuple],
+    states: List[Any],
 ) -> None:
-    if states is None:
-        for player, state in zip(player_list, states):
-            inform(player, message, state)
-    else:
-        for player in player_list:
-            inform(player, message)
+    for player_index, bot, params, state in zip(
+        range(len(bot_list)), bot_list, params_list, states
+    ):
+        result = inform(bot, message, params, state)
+        if isinstance(result, dict) and "state" in result:
+            states[player_index] = result["state"]
 
 
 def card_tuple_to_str(card_tuple: Optional[Tuple[int, int]]) -> str:
@@ -80,6 +84,7 @@ def card_list_tuples_to_strs(hand: List[Optional[Tuple[int, int]]]) -> List[str]
 
 
 def valid_card_format(card: Any) -> bool:
+    print(f"line {currentframe().f_lineno}: Validating card format: {card}")
     return (
         isinstance(card, tuple)
         and len(card) == 2
@@ -91,6 +96,7 @@ def valid_card_format(card: Any) -> bool:
 
 
 def valid_card_list_format(card_list: Any) -> bool:
+    print(f"line {currentframe().f_lineno}: Validating card list format: {card_list}")
     return (
         isinstance(card_list, list)
         and len(card_list) <= MAX_ATTACK_SIZE_AFTER_BURN
@@ -100,14 +106,20 @@ def valid_card_list_format(card_list: Any) -> bool:
 
 # possible actions: (ATTACK, attacking_card_list) , (DEFEND, defending_card, defending_index) , (TAKE) , (PASS) , (FORWARD, forwarding_card)
 def valid_action_format(action: Any) -> bool:
+    print(f"line {currentframe().f_lineno}: Validating action format: {action}")
     if not isinstance(action, list) or len(action) not in [1, 2, 3]:
+        print("line 111")
         return False
     action_kind = action[0]
     if action_kind == Output_actions.ATTACK:
+        print(f"line {currentframe().f_lineno}: Validating attack action: {action}")
         if len(action) != 2:
+            print(113, "Invalid attack action length")
             return False
         card_list = action[1]
-        return valid_card_list_format(card_list)
+        b = valid_card_list_format(card_list)
+        print(b)
+        return b
     if action_kind == Output_actions.DEFEND:
         if len(action) != 3:
             return False
@@ -163,10 +175,6 @@ def valid_to_attack(
     attack: List[Optional[Tuple[int, int]]],
     defence: List[Optional[Tuple[int, int]]],
 ) -> bool:
-    # if not attacking_card[0] in attack_vector(attack, defence):
-    # print(attacking_card)
-    # print(f"Invalid attack: {attacking_card[0]} not in attack vector")
-
     return attacking_card[0] in attack_vector(attack, defence)
 
 
@@ -178,46 +186,6 @@ def valid_to_defend(
     if defending_card[1] == kozar_suit and attacking_card[1] != kozar_suit:
         return True
     return False
-
-
-def take(
-    player_list: List[Any],
-    player_index: int,
-    attack: List[Optional[Tuple[int, int]]],
-    defence: List[Optional[Tuple[int, int]]],
-    player_hand: List[Tuple[int, int]],
-    states: Optional[List[Any]] = None,
-) -> None:
-    cards_to_hand = real_cards(attack + defence)
-    print(f"real cards = {cards_to_hand}")
-    # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
-    inform_all(
-        player_list,
-        (Input_actions.TAKE_PASSIVE, player_index, tuple(cards_to_hand)),
-        states,
-    )
-    for card in cards_to_hand:
-        player_hand.append(card)
-    print(f"actual hand: {player_hand}")
-
-
-# result = bots[curr_player].__call__(
-#     (Input_actions.DEFENCE,),
-#     hand,
-#     attack_card,
-#     trump_suit,
-#     bot_states[curr_player],
-# )
-
-
-# if defend(
-#     action[2][0],
-#     table_attack,
-#     table_defence,
-#     action[1][0],
-#     hands[curr_player],
-#     trump_suit,
-# ):
 
 
 def defend_with_one_card(
@@ -284,6 +252,8 @@ def forward_with_card_list(
             print("line 284: invalid forwarding")
             continue
         forwarding_hand.remove(card)
+        if None not in attack:
+            attack.append(None)
         attack[attack.index(None)] = card  # Place card in the first available slot
         successful_forwarding_card_list.append(card)
         num_of_allowed_forwarding_cards -= 1
@@ -297,7 +267,9 @@ def attack_with_card_list(
     attacking_card_list: List[Tuple[int, int]],
     attacking_hand: List[Tuple[int, int]],
 ) -> int:
+    print(f"line 260: {attacking_card_list}")
     if attack and all(card is not None for card in attack):
+        print("line 262: attack is full, cannot attack")
         return []
     # attack_vec = attack_vector(attack, defence)
     successful_attacking_cards = []
@@ -308,11 +280,15 @@ def attack_with_card_list(
         if not valid_to_attack(card, attack, defence):
             print("line 205: invalid attack")
             continue
+        print("line 273: attacking")
+        if None not in attack:
+            break
         attacking_index = attack.index(None)  # First index available for attacking
         attacking_hand.remove(card)
         attack[attacking_index] = card
         successful_attacking_cards.append(card)
-    # print(f"line {get_line()}: attack success")
+    # print(f"line {currentframe().f_lineno}: attack success")
+    print("line 279: successful attacking cards:", successful_attacking_cards)
     return successful_attacking_cards
 
 
@@ -345,11 +321,13 @@ def advance_game_step(
     hands = [card_list_strs_to_tuples(h) for h in state["hands"]]
     table_attack = [card_str_to_tuple(c) for c in state["table_attack"]]
     table_defence = [card_str_to_tuple(c) for c in state["table_defence"]]
+    max_attack_size = min(
+        len(hands[defender]),
+        MAX_ATTACK_SIZE_AFTER_BURN if state["burn"] else STARTING_MAX_ATTACK_SIZE,
+    )
+    if defender == attacker:
+        raise TypeError
     if not table_attack or all(card is None for card in table_attack):
-        max_attack_size = min(
-            len(hands[defender]),
-            MAX_ATTACK_SIZE_AFTER_BURN if state["burn"] else STARTING_MAX_ATTACK_SIZE,
-        )
         table_attack, table_defence = make_table_size_of_max_attack_size(
             table_attack, table_defence, max_attack_size
         )
@@ -363,6 +341,66 @@ def advance_game_step(
     curr_player = state["curr_player"]
     # Add a status list per bot if not present
     status = state.get("status", ["" for _ in bots])
+    did_game_init_occur: bool = state.get("did_game_init_occur", False)
+
+    def get_params_list():
+        return [
+            (hands[player_index], table_attack, table_defence)
+            for player_index in range(num_of_players)
+        ]
+
+    if not did_game_init_occur:
+
+        # TODO YOAD implement
+        # (Input_actions.GAME_INIT, num_of_players, player_index, hand,  kozar_card)
+        params_list = get_params_list()
+        for player_index, bot in enumerate(bots):
+            result = inform(
+                bot,
+                (
+                    Input_actions.GAME_INIT,
+                    num_of_players,
+                    player_index,
+                    hands[player_index],
+                    card_str_to_tuple(state["trump_card"]),
+                ),
+                params_list[player_index],
+                bot_states[player_index],
+            )
+            if isinstance(result, dict):
+                if "state" in result:
+                    bot_states[player_index] = result["state"]
+                if "log" in result:
+                    log[player_index].append(result["log"])
+                if "status" in result:
+                    set_status(player_index, result["status"])
+        # inform_all(
+        #     bots,
+        #     (Input_actions.GAME_INIT, num_of_players, curr_player, hands[curr_player], state["trump_card"], table_attack),
+        #     bot_states,
+        # )
+        did_game_init_occur = True
+
+    def take(
+        # bot_list: List[Any],
+        # player_index: int,
+        # table_attack: List[Optional[Tuple[int, int]]],
+        # table_defence: List[Optional[Tuple[int, int]]],
+        # player_hand: List[Tuple[int, int]],
+        # states: Optional[List[Any]] = None,
+    ) -> None:
+        cards_to_hand = real_cards(table_attack + table_defence)
+        print(f"real cards = {cards_to_hand}")
+        # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
+        inform_all(
+            bots,
+            (Input_actions.TAKE_PASSIVE, defender, tuple(cards_to_hand)),
+            get_params_list(),
+            bot_states,
+        )
+        for card in cards_to_hand:
+            hands[defender].append(card)
+        print(f"actual hand: {hands[defender]}")
 
     # --- WINNER DETECTION AND REMOVAL ---
     # Helper to mark winners and remove them from the round
@@ -411,11 +449,16 @@ def advance_game_step(
             for index in range(len(table_attack))
         ):
             print(
-                f"line {get_line()} (burn): attack is {table_attack}, defence is {table_defence}"
+                f"line {currentframe().f_lineno} (burn): attack is {table_attack}, defence is {table_defence}"
             )
             burned_cards = tuple(real_cards(table_attack + table_defence))
             num_of_burned_cards += len(burned_cards)
-            inform_all(bots, (Input_actions.BURN, burned_cards), bot_states)
+            inform_all(
+                bots,
+                (Input_actions.BURN, burned_cards),
+                get_params_list(),
+                bot_states,
+            )
             state["burn"] = True
             add_log(
                 defender,
@@ -434,16 +477,17 @@ def advance_game_step(
                     break
             # Call bot with correct signature
             try:
-                result = bots[curr_player].__call__(
+                result = bots[curr_player].call(
                     (Input_actions.DEFENCE,),
                     hand,
-                    attack_card,
-                    trump_suit,
+                    table_attack,
+                    table_defence,
                     bot_states[curr_player],
                 )
-            except:
+            except Exception as e:
+                print(f"\nline {currentframe().f_lineno}: Exception in bot call: {e}")
                 print(
-                    f"line {get_line()}: Bot {bot_names[curr_player]} raised an exception during defence"
+                    f"line {currentframe().f_lineno}: Bot {bot_names[curr_player]} raised an exception during defence\n"
                 )
                 result = Output_actions.TAKE
             # If bot returns dict, extract log/status
@@ -451,6 +495,7 @@ def advance_game_step(
                 action = result.get("action")
                 bot_log = result.get("log")
                 bot_status = result.get("status")
+                bot_states[curr_player] = result.get("state", bot_states[curr_player])
                 if bot_log:
                     add_log(curr_player, bot_log)
                 if bot_status:
@@ -458,7 +503,7 @@ def advance_game_step(
             else:
                 action = result
             if valid_action_format(action):
-                print(f"line {get_line()}: Defender action is valid")
+                print(f"line {currentframe().f_lineno}: Defender action is valid")
                 if action[0] == Output_actions.DEFEND:
                     successful_defending_cards, successful_index_list = (
                         defend_with_card_list(
@@ -479,6 +524,7 @@ def advance_game_step(
                                 successful_defending_cards,
                                 successful_index_list,
                             ),
+                            get_params_list(),
                             bot_states,
                         )
                         add_log(
@@ -486,36 +532,34 @@ def advance_game_step(
                             f"Player {curr_player+1} defended with {card_list_tuples_to_strs(successful_defending_cards)}",
                         )
                     else:
-                        take(
-                            bots,
-                            curr_player,
-                            table_attack,
-                            table_defence,
-                            hands[curr_player],
-                            bot_states,
-                        )
+                        take()
                         end_of_round = True
                         is_defence_succesful = False
 
                         add_log(curr_player, f"Player {curr_player+1} took cards")
                 elif action[0] == Output_actions.FORWARD:
-                    num_of_allowed_forwarding_cards = min(
-                        max_attack_size,
-                        len(hands[(defender + 1) % num_of_players]),
+                    # num_of_allowed_forwarding_cards = min(
+                    #     max_attack_size,
+                    #     len(hands[(defender + 1) % num_of_players]),
+                    # ) - len(real_cards(table_attack))
+                    num_of_allowed_forwarding_cards = len(
+                        hands[(defender + 1) % num_of_players]
                     ) - len(real_cards(table_attack))
+
                     if (
                         any(c is not None for c in table_defence)
                         or num_of_allowed_forwarding_cards <= 0
                         or not valid_action_format(action)
                     ):
-                        take(
-                            bots,
-                            defender,
-                            table_attack,
-                            table_defence,
-                            hands[defender],
-                            bot_states,
-                        )
+                        take()
+                        # take(
+                        #     bots,
+                        #     defender,
+                        #     table_attack,
+                        #     table_defence,
+                        #     hands[defender],
+                        #     bot_states,
+                        # )
                         end_of_round = True
                         is_defence_succesful = False
                         add_log(defender, f"Player {defender+1} took cards")
@@ -535,6 +579,7 @@ def advance_game_step(
                                     defender,
                                     successful_forwarding_card_list,
                                 ),
+                                get_params_list(),
                                 bot_states,
                             )
                             add_log(
@@ -547,51 +592,53 @@ def advance_game_step(
                             ) % num_of_players  # because defender is now the next player (current player will be incremented at the end of this function)
                         else:
                             print(
-                                f"line {get_line()}: No valid forwarding cards, taking cards"
+                                f"line {currentframe().f_lineno}: No valid forwarding cards, taking cards"
                             )
-                            take(
-                                bots,
-                                defender,
-                                table_attack,
-                                table_defence,
-                                hands[defender],
-                                bot_states,
-                            )
+                            take()
+                            # take(
+                            #     bots,
+                            #     defender,
+                            #     table_attack,
+                            #     table_defence,
+                            #     hands[defender],
+                            #     bot_states,
+                            # )
                             end_of_round = True
                             is_defence_succesful = False
                             add_log(defender, f"Player {defender+1} took cards")
                 else:
-                    take(
-                        bots,
-                        curr_player,
-                        table_attack,
-                        table_defence,
-                        hands[curr_player],
-                        bot_states,
-                    )
+                    take()
+                    # take(
+                    #     bots,
+                    #     curr_player,
+                    #     table_attack,
+                    #     table_defence,
+                    #     hands[curr_player],
+                    #     bot_states,
+                    # )
                     end_of_round = True
                     is_defence_succesful = False
                     add_log(curr_player, f"Player {curr_player+1} took cards")
 
             else:
-                print(f"line {get_line()}: invalid defence action")
-                take(
-                    bots,
-                    curr_player,
-                    table_attack,
-                    table_defence,
-                    hands[curr_player],
-                    bot_states,
-                )
+                print(f"line {currentframe().f_lineno}: invalid defence action")
+                take()
+                # take(
+                #     bots,
+                #     curr_player,
+                #     table_attack,
+                #     table_defence,
+                #     hands[curr_player],
+                #     bot_states,
+                # )
                 end_of_round = True
                 is_defence_succesful = False
                 add_log(curr_player, f"Player {curr_player+1} took cards")
     else:  # If the current player is not the defender, they are attacking
         # Prepare arguments for attack
         hand = hands[curr_player]
-        table = [c for c in table_attack if c is not None]
         try:
-            result = bots[curr_player].__call__(
+            result = bots[curr_player].call(
                 (
                     (
                         Input_actions.FIRST_ATTACK
@@ -600,19 +647,21 @@ def advance_game_step(
                     ),
                 ),
                 hand,
-                table,
-                trump_suit,
+                table_attack,
+                table_defence,
                 bot_states[curr_player],
             )
-        except:
+        except Exception as e:
+            print(f"\nline {currentframe().f_lineno}: Exception in bot call: {e}")
             print(
-                f"line {get_line()}: Bot {bot_names[curr_player]} raised an exception during attack"
+                f"line {currentframe().f_lineno}: Bot {bot_names[curr_player]} raised an exception during attack\n"
             )
             result = Output_actions.PASS
         if isinstance(result, dict):
             action = result.get("action")
             bot_log = result.get("log")
             bot_status = result.get("status")
+            bot_states[curr_player] = result.get("state", bot_states[curr_player])
             if bot_log:
                 add_log(curr_player, bot_log)
             if bot_status:
@@ -622,13 +671,23 @@ def advance_game_step(
 
         # The first attack case: player has to attack with at least 1 card.
         is_succesful_attack = False
+        print("660")
         if all(card is None for card in table_attack):
+            print(
+                f"line {currentframe().f_lineno}: First attack, player {curr_player+1} must attack with at least 1 card"
+            )
             if valid_action_format(action) and action[0] == Output_actions.ATTACK:
                 successful_attacking_cards = attack_with_card_list(
                     table_attack, table_defence, action[1], hands[curr_player]
                 )
                 is_succesful_attack = len(successful_attacking_cards) > 0
+                print(
+                    f"line {currentframe().f_lineno}: First attack successful: {is_succesful_attack}, attacking cards: {successful_attacking_cards}"
+                )
             if is_succesful_attack:
+                print(
+                    f"line {currentframe().f_lineno}: First attack is successful, attacking cards: {successful_attacking_cards}"
+                )
                 inform_all(
                     bots,
                     (
@@ -636,6 +695,7 @@ def advance_game_step(
                         curr_player,
                         successful_attacking_cards,
                     ),
+                    get_params_list(),
                     bot_states,
                 )
                 add_log(
@@ -643,12 +703,12 @@ def advance_game_step(
                     f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
                 )
             if not is_succesful_attack:
-                print("line 476: invalid first attack action")
+                print("line 678: invalid first attack action")
                 # If this is the first attack (all table_attack are None), pick a random card from hand and attack with it
                 if hands[curr_player]:
                     random_card = choice(hands[curr_player])
                     print(
-                        f"line {get_line()}: Forcing attack with random card from hand: {random_card}"
+                        f"line {currentframe().f_lineno}: Forcing attack with random card from hand: {random_card}"
                     )
                     card_singelton: List[Tuple[int, int]] = attack_with_card_list(
                         table_attack, table_defence, [random_card], hands[curr_player]
@@ -663,6 +723,7 @@ def advance_game_step(
                             curr_player,
                             [random_card],
                         ),
+                        get_params_list(),
                         bot_states,
                     )
                     add_log(
@@ -671,12 +732,11 @@ def advance_game_step(
                     )
                 else:
                     print(
-                        f"line {get_line()}: No cards to attack with in the first attack"
+                        f"line {currentframe().f_lineno}: No cards to attack with in the first attack"
                     )
                     raise ValueError(
                         f"Player {curr_player+1} has no cards to attack with in the first attack"
                     )
-                    print("THIS SHOULD NOT HAPPEN")
 
         # The regular attack case: player can attack with 0 or more cards.
         else:
@@ -694,6 +754,7 @@ def advance_game_step(
                         curr_player,
                         successful_attacking_cards,
                     ),
+                    get_params_list(),
                     bot_states,
                 )
                 add_log(
@@ -704,11 +765,12 @@ def advance_game_step(
                 inform_all(
                     bots,
                     (Input_actions.PASS_PASSIVE, curr_player),
+                    get_params_list(),
                     bot_states,
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
                 print(
-                    f"line {get_line()}: regular attack for player {curr_player+1} has failed, passing turn"
+                    f"line {currentframe().f_lineno}: regular attack for player {curr_player+1} has failed, passing turn"
                 )
     # --- Deal cards to players after round ends ---
     if end_of_round:
@@ -774,4 +836,5 @@ def advance_game_step(
         "status": status,
         "num_of_burned_cards": num_of_burned_cards,
         "deck_count": state["deck_count"],
+        "did_game_init_occur": did_game_init_occur,
     }
