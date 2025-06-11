@@ -22,7 +22,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from pydantic import BaseModel
 import random
-from durak_game import advance_game_step, SUITS, RANKS, pretty_print_state
+from durak_game import (
+    advance_game_step,
+    SUITS,
+    RANKS,
+    pretty_print_state,
+    card_tuple_to_str,
+    card_str_to_tuple,
+)
 from const_decks import DECK1
 
 app = FastAPI()
@@ -268,6 +275,19 @@ def main(to_print=False):
 
     # Create deck and initial state (reuse logic from create_game)
     deck = shuffle(create_deck())
+    # deck_str = "7,2 11,3 0,1 11,0 0,0 2,0 10,1 4,1 8,3 2,3 8,1 9,2 6,3 1,0 5,2 7,0 7,1 3,3 5,0 9,1 5,3 9,3 6,1 11,2 2,1 1,2 6,0 9,0 10,3 8,0 12,3 3,0 7,3 4,2 1,1 1,3 6,2 8,2 3,2 12,1 12,0 10,2 4,3 5,1 4,0 2,2 0,3 0,2 10,0 3,1 12,2 11,1"
+    # deck_str = [
+    #     card_tuple_to_str(tuple([int(x) for x in s.split(",")]))
+    #     for s in deck_str.split()
+    # ]
+
+    # print(deck)
+    # print("line 277")
+    # with open("deck.txt", "w") as file:
+    #     for c in deck:
+    #         r, s = card_str_to_tuple(f"{c["rank"]}{c["suit"]}")
+    #         file.write(f"{r},{s} ")
+    # print("line 281")
     trump_card_obj = deck[-1]
     trump_card = f"{trump_card_obj['rank']}{trump_card_obj['suit']}"
     trump_suit = trump_card_obj["suit"]
@@ -369,6 +389,10 @@ def tournament(num_of_games=10, to_print=False):
 
         # Redirect stdout to avoid inner printing, # but still allow outer prints
         # sys.stdout = open(os.devnull, "w")
+        # try:
+        #     loser = main(to_print=False)
+        # except:
+        #     loser = -1
         loser = main(to_print=False)
         # `sys.stdout = sys.__stdout__
         if loser != -1:

@@ -325,8 +325,8 @@ def advance_game_step(
         len(hands[defender]),
         MAX_ATTACK_SIZE_AFTER_BURN if state["burn"] else STARTING_MAX_ATTACK_SIZE,
     )
-    if defender == attacker:
-        raise TypeError
+    # if defender == attacker:
+    #     raise TypeError
     if not table_attack or all(card is None for card in table_attack):
         table_attack, table_defence = make_table_size_of_max_attack_size(
             table_attack, table_defence, max_attack_size
@@ -351,8 +351,6 @@ def advance_game_step(
 
     if not did_game_init_occur:
 
-        # TODO YOAD implement
-        # (Input_actions.GAME_INIT, num_of_players, player_index, hand,  kozar_card)
         params_list = get_params_list()
         for player_index, bot in enumerate(bots):
             result = inform(
@@ -374,21 +372,9 @@ def advance_game_step(
                     log[player_index].append(result["log"])
                 if "status" in result:
                     set_status(player_index, result["status"])
-        # inform_all(
-        #     bots,
-        #     (Input_actions.GAME_INIT, num_of_players, curr_player, hands[curr_player], state["trump_card"], table_attack),
-        #     bot_states,
-        # )
         did_game_init_occur = True
 
-    def take(
-        # bot_list: List[Any],
-        # player_index: int,
-        # table_attack: List[Optional[Tuple[int, int]]],
-        # table_defence: List[Optional[Tuple[int, int]]],
-        # player_hand: List[Tuple[int, int]],
-        # states: Optional[List[Any]] = None,
-    ) -> None:
+    def take() -> None:
         cards_to_hand = real_cards(table_attack + table_defence)
         print(f"real cards = {cards_to_hand}")
         # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
@@ -538,10 +524,6 @@ def advance_game_step(
 
                         add_log(curr_player, f"Player {curr_player+1} took cards")
                 elif action[0] == Output_actions.FORWARD:
-                    # num_of_allowed_forwarding_cards = min(
-                    #     max_attack_size,
-                    #     len(hands[(defender + 1) % num_of_players]),
-                    # ) - len(real_cards(table_attack))
                     num_of_allowed_forwarding_cards = len(
                         hands[(defender + 1) % num_of_players]
                     ) - len(real_cards(table_attack))
@@ -552,14 +534,6 @@ def advance_game_step(
                         or not valid_action_format(action)
                     ):
                         take()
-                        # take(
-                        #     bots,
-                        #     defender,
-                        #     table_attack,
-                        #     table_defence,
-                        #     hands[defender],
-                        #     bot_states,
-                        # )
                         end_of_round = True
                         is_defence_succesful = False
                         add_log(defender, f"Player {defender+1} took cards")
@@ -595,27 +569,11 @@ def advance_game_step(
                                 f"line {currentframe().f_lineno}: No valid forwarding cards, taking cards"
                             )
                             take()
-                            # take(
-                            #     bots,
-                            #     defender,
-                            #     table_attack,
-                            #     table_defence,
-                            #     hands[defender],
-                            #     bot_states,
-                            # )
                             end_of_round = True
                             is_defence_succesful = False
                             add_log(defender, f"Player {defender+1} took cards")
                 else:
                     take()
-                    # take(
-                    #     bots,
-                    #     curr_player,
-                    #     table_attack,
-                    #     table_defence,
-                    #     hands[curr_player],
-                    #     bot_states,
-                    # )
                     end_of_round = True
                     is_defence_succesful = False
                     add_log(curr_player, f"Player {curr_player+1} took cards")
@@ -623,14 +581,6 @@ def advance_game_step(
             else:
                 print(f"line {currentframe().f_lineno}: invalid defence action")
                 take()
-                # take(
-                #     bots,
-                #     curr_player,
-                #     table_attack,
-                #     table_defence,
-                #     hands[curr_player],
-                #     bot_states,
-                # )
                 end_of_round = True
                 is_defence_succesful = False
                 add_log(curr_player, f"Player {curr_player+1} took cards")
