@@ -1,9 +1,10 @@
 from abstract_bot import AbstractBot
 
-class bot(AbstractBot):
+class BeginnerBot(AbstractBot):
     """A beginner bot that plays a simple strategy."""
     
     def game_init(self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple, table_cards: list):
+        print("BeginnerBot: game_init called")
         ordered_suits = [0, 1, 2, 3]
         ordered_suits[self.get_kozar_suit()] = 3
         ordered_suits[3] = self.get_kozar_suit()
@@ -74,3 +75,5 @@ class bot(AbstractBot):
             if not succeess:
                 return [], []
         return defending_cards, indexes
+
+bot: BeginnerBot = BeginnerBot()
