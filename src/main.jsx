@@ -1,4 +1,4 @@
-//before change
+//after change
 // filepath: src/App.jsx
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
@@ -13,6 +13,8 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
     const [botFile, setBotFile] = useState(null);
     const [botName, setBotName] = useState("");
     const [error, setError] = useState("");
+    // Only use playerOrder for bot selection/order
+    const [playerOrder, setPlayerOrder] = useState([]);
 
     // Fetch bots from backend
     useEffect(() => {
@@ -79,8 +81,61 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
             }
         });
         setSelectedBots(arr);
+        // If playerOrder contains bots that are no longer selected, clear them
+        setPlayerOrder(prev =>
+            prev.map(fn => arr.includes(fn) ? fn : "")
+        );
         console.log("[BotManagerPage] Selected bots array updated", arr);
     }, [botCounts, bots, setSelectedBots]);
+
+    // When numPlayers or bots change, reset playerOrder if needed
+    useEffect(() => {
+        if (playerOrder.length !== numPlayers) {
+            setPlayerOrder(Array(numPlayers).fill(""));
+        }
+    }, [numPlayers, bots]);
+
+    // When playerOrder changes, update selectedBots to match
+    useEffect(() => {
+        setSelectedBots(playerOrder);
+    }, [playerOrder, setSelectedBots]);
+
+    // Handler for selecting a bot for a player slot
+    const handlePlayerOrderChange = (idx, value) => {
+        setPlayerOrder(prev => {
+            const next = [...prev];
+            next[idx] = value;
+            return next;
+        });
+    };
+
+    // Allow starting if all slots are filled (allowing duplicates)
+    const canStart = () => {
+        if (playerOrder.length !== numPlayers) return false;
+        if (playerOrder.some(fn => !fn)) return false;
+        return true;
+    };
+
+    // When starting game, use the chosen order
+    const handleStartGame = () => {
+        setSelectedBots(playerOrder);
+        onStartGame();
+    };
+
+    // Remove bot handler
+    const handleRemoveBot = async (filename) => {
+        if (!window.confirm("Are you sure you want to delete this bot?")) return;
+        try {
+            await fetch(`${API_URL}/bots/${filename}`, { method: "DELETE" });
+            // Refresh bot list
+            const botsResp = await fetch(`${API_URL}/bots`);
+            setBots(await botsResp.json());
+            // Remove from playerOrder if present
+            setPlayerOrder(prev => prev.map(fn => fn === filename ? "" : fn));
+        } catch (e) {
+            alert("Failed to delete bot.");
+        }
+    };
 
     return (
         <div style={{
@@ -177,33 +232,64 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
                         />
                     </label>
                 </div>
+                {/* Player order selection */}
                 <div style={{ marginBottom: 18 }}>
-                    <b style={{ fontSize: 16, color: '#222' }}>Choose how many of each bot:</b>
+                    <b style={{ fontSize: 16, color: '#222' }}>Choose Bot for Each Player (Order Matters):</b>
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                        {bots.map((bot, idx) => (
-                            <li key={bot.filename} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                                <span style={{ marginRight: 10, fontWeight: 500, color: '#6366f1', minWidth: 90 }}>{bot.name}</span>
-                                <input
-                                    type="number"
-                                    min={0}
-                                    max={numPlayers}
-                                    value={botCounts[bot.filename] || 0}
-                                    onChange={e => {
-                                        let val = Number(e.target.value);
-                                        const otherTotal = totalSelected - (botCounts[bot.filename] || 0);
-                                        if (val < 0) val = 0;
-                                        if (val > numPlayers - otherTotal) val = numPlayers - otherTotal;
-                                        setBotCounts({ ...botCounts, [bot.filename]: val });
-                                    }}
+                        {playerOrder.map((filename, idx) => (
+                            <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+                                <span style={{ color: '#888', marginRight: 10 }}>#{idx + 1}</span>
+                                <select
+                                    value={filename}
+                                    onChange={e => handlePlayerOrderChange(idx, e.target.value)}
                                     style={{
-                                        width: 48,
+                                        minWidth: 120,
                                         fontSize: 16,
                                         borderRadius: 7,
                                         border: '1.5px solid #c7d2fe',
                                         background: '#f1f5f9',
                                         padding: '6px 8px',
+                                        marginRight: 10,
                                     }}
-                                />
+                                >
+                                    <option value="">-- Select Bot --</option>
+                                    {bots.map(bot => (
+                                        <option key={bot.filename} value={bot.filename}>
+                                            {bot.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {filename && (
+                                    <span style={{ color: '#6366f1', fontWeight: 500 }}>
+                                        {bots.find(b => b.filename === filename)?.name || filename}
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                    <b style={{ fontSize: 16, color: '#222' }}>Available Bots:</b>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        {bots.map((bot, idx) => (
+                            <li key={bot.filename} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                <span style={{ marginRight: 10, fontWeight: 500, color: '#6366f1', minWidth: 90 }}>{bot.name}</span>
+                                <button
+                                    onClick={() => handleRemoveBot(bot.filename)}
+                                    style={{
+                                        marginLeft: 8,
+                                        padding: '4px 10px',
+                                        fontSize: 13,
+                                        borderRadius: 6,
+                                        background: '#ef4444',
+                                        color: '#fff',
+                                        border: 'none',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Remove
+                                </button>
                             </li>
                         ))}
                     </ul>
@@ -220,13 +306,13 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
                             color: '#fff',
                             border: 'none',
                             fontWeight: 700,
-                            cursor: totalSelected !== numPlayers || numPlayers < 2 ? 'not-allowed' : 'pointer',
-                            opacity: totalSelected !== numPlayers || numPlayers < 2 ? 0.5 : 1,
+                            cursor: canStart() ? 'pointer' : 'not-allowed',
+                            opacity: canStart() ? 1 : 0.5,
                             boxShadow: '0 2px 8px #6366f122',
                             transition: 'background 0.2s',
                         }}
-                        disabled={totalSelected !== numPlayers || numPlayers < 2}
-                        onClick={onStartGame}
+                        disabled={!canStart()}
+                        onClick={handleStartGame}
                     >
                         Start Game
                     </button>

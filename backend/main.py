@@ -19,6 +19,7 @@ if backend_dir not in sys.path:
 from fastapi import FastAPI, UploadFile, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import status as fastapi_status
 from typing import List
 from pydantic import BaseModel
 import random
@@ -149,6 +150,22 @@ async def upload_bot(file: UploadFile, name: str = Form(...)):
 @app.get("/api/bots/{filename}")
 def get_bot_file(filename: str):
     return FileResponse(os.path.join(BOTS_DIR, filename))
+
+
+@app.delete("/api/bots/{filename}")
+def delete_bot(filename: str):
+    filepath = os.path.join(BOTS_DIR, filename)
+    name_file = os.path.splitext(filepath)[0] + ".name"
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        if os.path.exists(name_file):
+            os.remove(name_file)
+        return {"success": True}
+    except Exception as e:
+        return JSONResponse(
+            {"error": str(e)}, status_code=fastapi_status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 @app.post("/api/games", response_model=GameState)
