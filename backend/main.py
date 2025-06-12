@@ -30,6 +30,7 @@ from durak_game import (
     pretty_print_state,
     card_tuple_to_str,
     card_str_to_tuple,
+    CARDS_PER_HAND,
 )
 from const_decks import DECK1
 
@@ -72,7 +73,7 @@ def shuffle(deck):
 
 def deal_players(deck, num_players):
     hands = [[] for _ in range(num_players)]
-    for i in range(6):
+    for i in range(CARDS_PER_HAND):
         for j in range(num_players):
             if deck:
                 hands[j].append(deck.pop(0))
