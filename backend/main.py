@@ -254,7 +254,6 @@ def main(to_print=False):
         "--delay", type=float, default=0.5, help="Delay between steps (seconds)"
     )
     args = parser.parse_args()
-
     # Prepare bot filenames and paths
     bot_filenames = args.bots
     bot_paths = [os.path.join(BOTS_DIR, fname) for fname in bot_filenames]
@@ -272,7 +271,6 @@ def main(to_print=False):
         bot_names.append(bot_name)
 
     bot_names = [f"Player {i+1}: {bot_names[i]}" for i in range(len(bot_names))]
-
     # Create deck and initial state (reuse logic from create_game)
     deck = shuffle(create_deck())
     # deck_str = "7,2 11,3 0,1 11,0 0,0 2,0 10,1 4,1 8,3 2,3 8,1 9,2 6,3 1,0 5,2 7,0 7,1 3,3 5,0 9,1 5,3 9,3 6,1 11,2 2,1 1,2 6,0 9,0 10,3 8,0 12,3 3,0 7,3 4,2 1,1 1,3 6,2 8,2 3,2 12,1 12,0 10,2 4,3 5,1 4,0 2,2 0,3 0,2 10,0 3,1 12,2 11,1"
@@ -383,10 +381,15 @@ def tournament(num_of_games=10, to_print=False):
     count_proper_games = 0
     max_total_games = 2 * num_of_games
     game_idx = 0
+    bot_filenames_orig = sys.argv[1:]  # Save original order
     while count_proper_games < num_of_games and game_idx < max_total_games:
         if to_print:
             print(f"Game {game_idx + 1} of {num_of_games}:")
 
+        # Randomize player order for this game
+        bot_filenames = bot_filenames_orig[:]
+        random.shuffle(bot_filenames)
+        sys.argv = ["main.py"] + bot_filenames
         # Redirect stdout to avoid inner printing, # but still allow outer prints
         # sys.stdout = open(os.devnull, "w")
         # try:
@@ -398,7 +401,9 @@ def tournament(num_of_games=10, to_print=False):
         if loser != -1:
             if to_print:
                 print(f"Game {game_idx + 1} ended with loser: {loser}")
-            loser_count_lst[loser] += 1
+            # Map loser index back to original bot order
+            orig_idx = bot_filenames_orig.index(bot_filenames[loser])
+            loser_count_lst[orig_idx] += 1
             count_proper_games += 1
         elif to_print:
             print(f"Game {game_idx + 1} ended without a loser (max steps reached).")
@@ -408,6 +413,7 @@ def tournament(num_of_games=10, to_print=False):
         print(f"Player {i + 1} lost {count} times.")
     num_of_infinite_games = game_idx - count_proper_games
     print(f"\n{num_of_infinite_games} games got caught in an infinite loop.")
+
     return loser_count_lst, num_of_infinite_games
 
 
