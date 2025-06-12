@@ -56,7 +56,8 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
     // Flatten all bot logs into a single array for the game log (with bot/player info)
     function getGameLog(log, bots) {
         if (!Array.isArray(log)) return [];
-        const entries = [];
+        // Collect all log entries with their player and order
+        let entries = [];
         log.forEach((botLog, idx) => {
             if (Array.isArray(botLog)) {
                 botLog.forEach((entry, eidx) => {
@@ -65,11 +66,31 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                         bot: bots && bots[idx] ? bots[idx] : `Player ${idx + 1}`,
                         text: entry,
                         order: eidx,
+                        logIndex: entries.length, // fallback order
                     });
                 });
             }
         });
-        return entries;
+        // Try to order by time: assume log[0][0], log[1][0], ... are in time order if appended in game logic
+        // But since logs are per player, we can't guarantee order unless each entry has a timestamp.
+        // Instead, reconstruct a global log by interleaving by index.
+        // We'll use a round-robin merge by log entry index.
+        let merged = [];
+        let maxLen = Math.max(...log.map(arr => arr.length));
+        for (let i = 0; i < maxLen; ++i) {
+            for (let j = 0; j < log.length; ++j) {
+                if (log[j] && log[j][i] !== undefined) {
+                    merged.push({
+                        player: j,
+                        bot: bots && bots[j] ? bots[j] : `Player ${j + 1}`,
+                        text: log[j][i],
+                        order: i,
+                        logIndex: merged.length,
+                    });
+                }
+            }
+        }
+        return merged;
     }
 
     // Helper to chunk an array into rows of n
