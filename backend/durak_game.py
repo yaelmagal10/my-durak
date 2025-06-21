@@ -2,10 +2,13 @@ from random import shuffle, choice
 from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
+from multiprocessing import Queue, Process, reduction
+from dill import Pickler
 
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
+MAX_TIME_PER_TURN: float = 0.1
 RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 SUITS: List[str] = ["♣", "♦", "♥", "♠"]
 
@@ -41,13 +44,48 @@ def card_str_to_tuple(card_str: Optional[str]) -> Optional[Tuple[int, int]]:
         suit = card_str[1]
     return (RANKS.index(rank), SUITS.index(suit))
 
+def __call_bot_subprocess(q, bot, args, kwargs):
+    f=open("file.txt","w")
+    f.write("Subprocess started\n")
+    f.close()
+    try:
+        result = bot.call(*args, **kwargs)
+        q.put(("ok", result))
+    except Exception as e:
+        q.put(("err", e))
+
+
+def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
+    return bot.call(*args, **kwargs)
+    # TODO: Implement timeout handling
+    # I'm working on a multiprocessing solution to handle timeouts, It will change a lot, so I'm pushing it like this for now
+    # reduction.ForkingPickler = Pickler
+    # q = Queue()
+    # p = Process(target=__call_bot_subprocess, args=(q, bot, args, kwargs))
+    # p.start()
+    # p.join(timeout)
+
+    # if p.is_alive():
+    #     p.terminate()
+    #     p.join()
+    #     raise TimeoutError("Bot call timed out")
+
+    # if not q.empty():
+    #     status, value = q.get()
+    #     if status == "ok":
+    #         return value
+    #     else:
+    #         raise value
+
+    # return None # bot stopped the process completely
+
 
 def inform(player_bot: Any, message: Any, params: Tuple, state: Any) -> Any:
     # Provide default values for bot call signature
     # message, hand, table_or_attack_card, trump_suit, bot_state=None
     # For inform, only message and state are relevant, so pass None for others
     try:
-        return player_bot.call(message, *params, state)
+        return call_bot(player_bot, message, *params, state)
     # except Exception as e:
     except Exception as e:
         print(f"\nline {currentframe().f_lineno}: Exception in inform call: {e}")
@@ -325,6 +363,16 @@ def advance_game_step(
     attacker = state["attacker"]
     defender = state["defender"]
     hands = [card_list_strs_to_tuples(h) for h in state["hands"]]
+    print("hands:", hands)
+    def get_next_player(idx: int) -> int:
+        deck = state.get("deck", [])
+        if deck:
+            return (idx + 1) % len(hands)
+        for offset in range(1, len(hands) + 1):
+            ni = (idx + offset) % len(hands)
+            if len(hands[ni]) > 0:
+                return ni
+        return idx
     table_attack = [card_str_to_tuple(c) for c in state["table_attack"]]
     table_defence = [card_str_to_tuple(c) for c in state["table_defence"]]
     max_attack_size = min(
@@ -335,8 +383,12 @@ def advance_game_step(
         table_attack, table_defence = make_table_size_of_max_attack_size(
             table_attack, table_defence, max_attack_size
         )
+    if len(table_defence) < max_attack_size:
+        table_defence.extend([None] * (max_attack_size - len(table_defence)))
+    if len(table_attack) < max_attack_size:
+        table_attack.extend([None] * (max_attack_size - len(table_attack)))
     end_of_round = False
-    is_defence_succesful = (
+    is_defence_successful = (
         True  # If the attack is successful, the defender will be the next player
     )
     trump_suit = SUITS.index(state["trump_suit"])
@@ -401,6 +453,12 @@ def advance_game_step(
         for i, hand in enumerate(hands):
             if len(hand) == 0 and status[i] != "WON":
                 status[i] = "WON"
+                inform_all(
+                    bots,
+                    (Input_actions.PASS_PASSIVE, curr_player),
+                    get_params_list(),
+                    bot_states,
+                )
                 log[i].append("Player has WON!")
         # Remove all players who have won from the round (but keep them in the state for UI)
         # Only active players participate in the round
@@ -424,7 +482,7 @@ def advance_game_step(
         #     curr_player = next_active(curr_player)
         # # If only one player left, game is over (handled by frontend/end condition)
 
-        def next_active(idx):
+        def closest_active(idx):
             for offset in range(len(hands) + 1):
                 ni = (idx + offset) % len(hands)
                 if len(hands[ni]) > 0:
@@ -434,9 +492,9 @@ def advance_game_step(
         # assert attacker == next_active(attacker)
         # assert defender == next_active(defender)
         # assert curr_player == next_active(curr_player)
-        attacker = next_active(attacker)
-        defender = next_active(defender)
-        curr_player = next_active(curr_player)
+        attacker = closest_active(attacker)
+        defender = closest_active(defender)
+        curr_player = closest_active(curr_player)
         # If only one player left, game is over (handled by frontend/end condition)
 
     # Helper to add a log entry for a specific bot
@@ -471,7 +529,7 @@ def advance_game_step(
                 f"Player {defender+1} burned cards: {card_list_tuples_to_strs(burned_cards)}",
             )
             end_of_round = True
-            is_defence_succesful = True
+            is_defence_successful = True
         else:
             # Prepare arguments for defence
             hand = hands[curr_player]
@@ -483,7 +541,8 @@ def advance_game_step(
                     break
             # Call bot with correct signature
             try:
-                result = bots[curr_player].call(
+                result = call_bot(
+                    bots[curr_player],
                     (Input_actions.DEFENCE,),
                     hand,
                     table_attack,
@@ -540,12 +599,12 @@ def advance_game_step(
                     else:
                         take()
                         end_of_round = True
-                        is_defence_succesful = False
+                        is_defence_successful = False
 
                         add_log(curr_player, f"Player {curr_player+1} took cards")
                 elif action[0] == Output_actions.FORWARD:
                     num_of_allowed_forwarding_cards = len(
-                        hands[(defender + 1) % num_of_players]
+                        hands[get_next_player(defender)]
                     ) - len(real_cards(table_attack))
 
                     if (
@@ -555,7 +614,7 @@ def advance_game_step(
                     ):
                         take()
                         end_of_round = True
-                        is_defence_succesful = False
+                        is_defence_successful = False
                         add_log(defender, f"Player {defender+1} took cards")
                     else:
                         forwarding_card_list = action[1]
@@ -580,10 +639,10 @@ def advance_game_step(
                                 defender,
                                 f"Player {defender+1} forwarded cards {card_list_tuples_to_strs(successful_forwarding_card_list)}",
                             )
-                            defender = (defender + 1) % num_of_players  ##
-                            curr_player = (
-                                defender - 1
-                            ) % num_of_players  # because defender is now the next player (current player will be incremented at the end of this function)
+                            defender = get_next_player(defender)
+                            # curr_player = (
+                            #     defender - 1
+                            # ) % num_of_players  # because defender is now the next player (current player will be incremented at the end of this function)
                             allowed_attack_length = len(hands[defender])
                             assert (
                                 len(table_attack) <= allowed_attack_length
@@ -597,25 +656,26 @@ def advance_game_step(
                             )
                             take()
                             end_of_round = True
-                            is_defence_succesful = False
+                            is_defence_successful = False
                             add_log(defender, f"Player {defender+1} took cards")
                 else:
                     take()
                     end_of_round = True
-                    is_defence_succesful = False
+                    is_defence_successful = False
                     add_log(curr_player, f"Player {curr_player+1} took cards")
 
             else:
                 print(f"line {currentframe().f_lineno}: invalid defence action")
                 take()
                 end_of_round = True
-                is_defence_succesful = False
+                is_defence_successful = False
                 add_log(curr_player, f"Player {curr_player+1} took cards")
     else:  # If the current player is not the defender, they are attacking
         # Prepare arguments for attack
         hand = hands[curr_player]
         try:
-            result = bots[curr_player].call(
+            result = call_bot(
+                bots[curr_player],
                 (
                     (
                         Input_actions.FIRST_ATTACK
@@ -780,11 +840,11 @@ def advance_game_step(
         # Reset table attack and defence
         table_attack = []
         table_defence = []
-        attacker = defender if is_defence_succesful else (defender + 1) % num_of_players
-        defender = (attacker + 1) % num_of_players
+        attacker = defender if is_defence_successful else get_next_player(defender)
+        defender = get_next_player(attacker)
         curr_player = attacker  # Reset current player to the new attacker
     else:  # The round is not over, just increment curr_player and check for wins
-        curr_player = (curr_player + 1) % num_of_players
+        curr_player = get_next_player(curr_player)
 
     # Update winners and remove them from the round
     if state["deck_count"] == 0:

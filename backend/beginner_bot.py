@@ -11,7 +11,8 @@ class BeginnerBot(AbstractBot):
         ordered_suits = [0, 1, 2, 3]
         ordered_suits[self.get_kozar_suit()] = 3
         ordered_suits[3] = self.get_kozar_suit()
-        self.card_order = [(i, suit) for i in range(13) for suit in ordered_suits]
+        self.card_order = [(i, suit) for suit in ordered_suits for i in range(13)]
+        print(f"card_order: {self.card_order}")
 
     def remove_Nones(self, lst):
         """Remove None values from a list."""
@@ -61,21 +62,22 @@ class BeginnerBot(AbstractBot):
         ]
         defending_cards = []
         indexes = []
+        table_defence = self.get_table_defence()
         for i, card in sorted(
             enumerate(self.get_table_attack()),
             key=lambda x: self.card_order.index(x[1]) if x[1] is not None else 53,
         ):
-            if card is None:
+            if card is None or table_defence[i] is not None:
                 continue
-            succeess = False
+            success = False
             for number in numbers_by_suit[card[1]]:
                 if number > card[0]:
                     defending_cards.append((number, card[1]))
                     indexes.append(i)
-                    succeess = True
+                    success = True
                     numbers_by_suit[card[1]].remove(number)
                     break
-            if not succeess:
+            if not success:
                 if len(numbers_by_suit[self.get_kozar_suit()]) > 0:
                     defending_cards.append(
                         (
@@ -85,8 +87,8 @@ class BeginnerBot(AbstractBot):
                     )
                     indexes.append(i)
                     numbers_by_suit[self.get_kozar_suit()].pop(0)
-                    succeess = True
-            if not succeess:
+                    success = True
+            if not success:
                 return [], []
         return defending_cards, indexes
 
