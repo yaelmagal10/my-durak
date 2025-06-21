@@ -10,6 +10,7 @@ import importlib.util
 import sys
 import io
 import traceback
+import queue as lib_queue
 
 # Add this before importing durak_game
 backend_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import status as fastapi_status
 from typing import List
 from pydantic import BaseModel
+from multiprocessing import Process, Pipe, Queue
 import random
 from durak_game import (
     advance_game_step,
@@ -171,6 +173,22 @@ def delete_bot(filename: str):
         )
 
 
+def run_game_subprocess(pipe, state: GameState, bot_paths: List[str], bot_names: str):
+    """Run the game in a separate subprocess to avoid blocking. Send a value in pipe to signal the game step."""
+    bots = [load_bot(path) for path in bot_paths]
+    while True:
+        try:
+            pipe.recv()
+            state = advance_game_step(state, bots, bot_names)
+            bot_states = state["bot_states"]
+            state["bot_states"] = [{} for _ in bots]
+            pipe.send(state)
+            state["bot_states"] = bot_states
+        except Exception as e:
+            print("Error in game subprocess:", e)
+            return
+
+
 @app.post("/api/games", response_model=GameState)
 async def create_game(request: Request):
     bot_filenames = await request.json()
@@ -238,7 +256,11 @@ async def create_game(request: Request):
     # Pretty print the initial state for debugging
     pretty_print_state(state)
     game_id = uuid.uuid4().hex
-    GAMES[game_id] = {"bots": bot_filenames, "bot_names": bot_names, "state": state}
+    bot_paths = [os.path.join(BOTS_DIR, fname) for fname in bot_filenames]
+    game_pipes = Pipe()
+    game_process = Process(target=run_game_subprocess, args=(game_pipes[1], state, bot_paths, bot_names))
+    game_process.start()
+    GAMES[game_id] = {"bots": bot_filenames, "bot_names": bot_names, "state": state, "process": game_process, "pipes": game_pipes}
     return GameState(id=game_id, bots=bot_names, state=state)
 
 
@@ -257,16 +279,24 @@ async def step_game(game_id: str):
         return JSONResponse({"error": "Game not found"}, status_code=404)
     bots = [load_bot(os.path.join(BOTS_DIR, fname)) for fname in game["bots"]]
     state = game["state"]
-    # Pass bot_names for display
-    new_state = advance_game_step(state, bots, game.get("bot_names", []))
-    game["state"] = new_state
+    game_process = game.get("process")
+    game_pipes = game.get("pipes")
+    pipe = game_pipes[0]
+    pipe.send(0) # this value is ingnored for now and is just a signal to advance the game step
+    if not pipe.poll(1):
+        print(f"Game {game_id} timed out. Stopping game.")
+        game_process.terminate()
+        new_state = state
+    else:
+        new_state = pipe.recv()
+        game["state"] = new_state
     return GameState(id=game_id, bots=game.get("bot_names", []), state=new_state)
 
 
 max_steps_achieved = 0
 
 
-def main(to_print=False):
+def main_subprocess(queue: Queue, to_print=False):
     global max_steps_achieved
 
     import argparse
@@ -388,6 +418,7 @@ def main(to_print=False):
             # Print all winners
             if step == MAX_NUM_OF_STEPS:
                 print("Game ended due to reaching max steps.\nNo one loses.")
+                queue.put(-1)
                 return -1  # Indicate game ended without a loser
             else:
                 max_steps_achieved = max(max_steps_achieved, step)
@@ -397,6 +428,7 @@ def main(to_print=False):
                 # Print the loser (the only one with cards left)
                 if len(alive) == 1:
                     print(f"\nLOSER: {bot_names[alive[0]]}")
+                    queue.put(alive[0])
                     return alive[0]  # Return the index of the loser
         # Advance game step
         state = advance_game_step(state, bots, bot_names)
@@ -425,7 +457,20 @@ def tournament(num_of_games=10, to_print=False):
         #     loser = main(to_print=False)
         # except:
         #     loser = -1
-        loser = main(to_print=False)
+        queue = Queue()
+        p = Process(target=main_subprocess, args=(queue, False))
+        p.start()
+        try:
+            loser = queue.get(timeout=30)
+            if type(loser) is not int:
+                raise ValueError("Game did not return a valid loser index.")
+        except lib_queue.Empty as e:
+            print("queue is empty", e)
+            loser = -1
+        except Exception as e:
+            print(f"Error in game subprocess: {e}")
+            loser = -1
+        p.terminate()
         # `sys.stdout = sys.__stdout__
         if loser != -1:
             if to_print:

@@ -2,13 +2,15 @@ from random import shuffle, choice
 from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
-from multiprocessing import Queue, Process, reduction
-from dill import Pickler
+from threading import Thread
+from time import time
+# from multiprocessing import Queue, Process, reduction
+# from dill import Pickler
 
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
-MAX_TIME_PER_TURN: float = 0.1
+MAX_TIME_OVERALL: float = 0.1
 RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 SUITS: List[str] = ["♣", "♦", "♥", "♠"]
 
@@ -44,21 +46,40 @@ def card_str_to_tuple(card_str: Optional[str]) -> Optional[Tuple[int, int]]:
         suit = card_str[1]
     return (RANKS.index(rank), SUITS.index(suit))
 
-def __call_bot_subprocess(q, bot, args, kwargs):
-    f=open("file.txt","w")
-    f.write("Subprocess started\n")
-    f.close()
-    try:
-        result = bot.call(*args, **kwargs)
-        q.put(("ok", result))
-    except Exception as e:
-        q.put(("err", e))
+# def __call_bot_subprocess(q, bot, args, kwargs):
+#     f=open("file.txt","w")
+#     f.write("Subprocess started\n")
+#     f.close()
+#     try:
+#         result = bot.call(*args, **kwargs)
+#         q.put(("ok", result))
+#     except Exception as e:
+#         q.put(("err", e))
 
 
-def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
-    return bot.call(*args, **kwargs)
-    # TODO: Implement timeout handling
-    # I'm working on a multiprocessing solution to handle timeouts, It will change a lot, so I'm pushing it like this for now
+def call_bot(bot, *args, timer: dict = {"time_left": MAX_TIME_OVERALL}, **kwargs):
+    result = {}
+    def target(bot, args, kwargs):
+        start = time()
+        try:
+            result["value"] = bot.call(*args, **kwargs)
+        except Exception as e:
+            print(f"\nline {currentframe().f_lineno}: Exception in bot call: {e}")
+        end = time()
+        result["time_taken"] = end - start
+    if not isinstance(timer, dict) or "time_left" not in timer:
+        timer = {"time_left": MAX_TIME_OVERALL}
+    if timer["time_left"] <= 0:
+        return None
+    thread = Thread(target=target, args=(bot, args, kwargs))
+    thread.start()
+    thread.join(timer["time_left"])
+    if thread.is_alive():
+        print(f"\nline {currentframe().f_lineno}: Bot call timed out")
+        timer["time_left"] = 0
+        return None
+    timer["time_left"] -= result.get("time_taken", 0)
+    return result.get("value", None)
     # reduction.ForkingPickler = Pickler
     # q = Queue()
     # p = Process(target=__call_bot_subprocess, args=(q, bot, args, kwargs))
@@ -80,12 +101,12 @@ def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
     # return None # bot stopped the process completely
 
 
-def inform(player_bot: Any, message: Any, params: Tuple, state: Any) -> Any:
+def inform(player_bot: Any, message: Any, params: Tuple, state: Any, timer: dict) -> Any:
     # Provide default values for bot call signature
     # message, hand, table_or_attack_card, trump_suit, bot_state=None
     # For inform, only message and state are relevant, so pass None for others
     try:
-        return call_bot(player_bot, message, *params, state)
+        return call_bot(player_bot, message, *params, state, timer=timer)
     # except Exception as e:
     except Exception as e:
         print(f"\nline {currentframe().f_lineno}: Exception in inform call: {e}")
@@ -98,11 +119,12 @@ def inform_all(
     message: Any,
     params_list: List[Tuple],
     states: List[Any],
+    timer_list: List[dict]
 ) -> None:
-    for player_index, bot, params, state in zip(
-        range(len(bot_list)), bot_list, params_list, states
+    for player_index, bot, params, state, timer in zip(
+        range(len(bot_list)), bot_list, params_list, states, timer_list
     ):
-        result = inform(bot, message, params, state)
+        result = inform(bot, message, params, state, timer)
         if isinstance(result, dict) and "state" in result:
             states[player_index] = result["state"]
 
@@ -395,6 +417,8 @@ def advance_game_step(
     # log is now a list of lists, one per bot
     log = [l[:] for l in state["log"]]
     bot_states = state.get("bot_states", [{} for _ in bots])
+    timers = state.get("timers", [{"time_left": MAX_TIME_OVERALL} for _ in bots])
+    print(f"times: {[timer['time_left'] for timer in timers]}")
     curr_player = state["curr_player"]
     # Add a status list per bot if not present
     status = state.get("status", ["" for _ in bots])
@@ -421,6 +445,7 @@ def advance_game_step(
                 ),
                 params_list[player_index],
                 bot_states[player_index],
+                timers[player_index],
             )
             if isinstance(result, dict):
                 if "state" in result:
@@ -440,6 +465,7 @@ def advance_game_step(
             (Input_actions.TAKE_PASSIVE, defender, tuple(cards_to_hand)),
             get_params_list(),
             bot_states,
+            timers
         )
         for card in cards_to_hand:
             hands[defender].append(card)
@@ -458,6 +484,7 @@ def advance_game_step(
                     (Input_actions.PASS_PASSIVE, curr_player),
                     get_params_list(),
                     bot_states,
+                    timers
                 )
                 log[i].append("Player has WON!")
         # Remove all players who have won from the round (but keep them in the state for UI)
@@ -522,6 +549,7 @@ def advance_game_step(
                 (Input_actions.BURN, burned_cards),
                 get_params_list(),
                 bot_states,
+                timers
             )
             state["burn"] = True
             add_log(
@@ -548,6 +576,7 @@ def advance_game_step(
                     table_attack,
                     table_defence,
                     bot_states[curr_player],
+                    timer=timers[curr_player]
                 )
             except Exception as e:
                 print(f"\nline {currentframe().f_lineno}: Exception in bot call: {e}")
@@ -591,6 +620,7 @@ def advance_game_step(
                             ),
                             get_params_list(),
                             bot_states,
+                            timers
                         )
                         add_log(
                             curr_player,
@@ -634,6 +664,7 @@ def advance_game_step(
                                 ),
                                 get_params_list(),
                                 bot_states,
+                                timers
                             )
                             add_log(
                                 defender,
@@ -687,6 +718,7 @@ def advance_game_step(
                 table_attack,
                 table_defence,
                 bot_states[curr_player],
+                timer=timers[curr_player]
             )
         except Exception as e:
             print(f"\nline {currentframe().f_lineno}: Exception in bot call: {e}")
@@ -734,6 +766,7 @@ def advance_game_step(
                     ),
                     get_params_list(),
                     bot_states,
+                    timers
                 )
                 add_log(
                     curr_player,
@@ -762,6 +795,7 @@ def advance_game_step(
                         ),
                         get_params_list(),
                         bot_states,
+                        timers
                     )
                     add_log(
                         curr_player,
@@ -793,6 +827,7 @@ def advance_game_step(
                     ),
                     get_params_list(),
                     bot_states,
+                    timers
                 )
                 add_log(
                     curr_player,
@@ -804,6 +839,7 @@ def advance_game_step(
                     (Input_actions.PASS_PASSIVE, curr_player),
                     get_params_list(),
                     bot_states,
+                    timers
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
                 print(
@@ -867,6 +903,7 @@ def advance_game_step(
         "defender": defender,
         "log": log,
         "bot_states": bot_states,
+        "timers": timers,
         "curr_player": curr_player,
         "status": status,
         "num_of_burned_cards": num_of_burned_cards,
