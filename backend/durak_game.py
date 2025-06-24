@@ -381,6 +381,7 @@ def advance_game_step(
     num_of_burned_cards = state["num_of_burned_cards"]
     attacker = state["attacker"]
     defender = state["defender"]
+    lowest_trump = state["lowest_trump"]
     hands = [card_list_strs_to_tuples(h) for h in state["hands"]]
     print("hands:", hands)
     def get_next_player(idx: int) -> int:
@@ -437,6 +438,8 @@ def advance_game_step(
                     player_index,
                     hands[player_index],
                     card_str_to_tuple(state["trump_card"]),
+                    attacker,
+                    lowest_trump
                 ),
                 params_list[player_index],
                 bot_states[player_index],

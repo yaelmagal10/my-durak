@@ -55,6 +55,8 @@ class AbstractBot(ABC):
         my_index: int,
         hand: List[Tuple[int, int]],
         kozar_card: Tuple[int, int],
+        first_player: int,
+        lowest_kozar: int
     ):
         """Gets called when the game is initialized."""
         pass
@@ -181,7 +183,7 @@ class AbstractBot(ABC):
                 self.__my_index = event[2]
                 self.__hand = event[3]
                 self.__kozar_card = event[4]
-                self.game_init(event[1], event[2], event[3], event[4])
+                self.game_init(event[1], event[2], event[3], event[4], event[5], event[6])
             case Input_actions.WINNER_PASSIVE:
                 self.__active_players.pop(event[1])
                 self.listen_winner(event[1])
