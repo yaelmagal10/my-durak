@@ -114,17 +114,23 @@ def inform(player_bot: Any, message: Any, params: Tuple, state: Any) -> Any:
 
 
 def inform_all(
-    bot_list: List[Any],
+    bots: List[Any],
+    index_list: List[int],
     message: Any,
     params_list: List[Tuple],
     states: List[Any],
+    log: List[List[str]]
 ) -> None:
-    for player_index, bot, params, state in zip(
-        range(len(bot_list)), bot_list, params_list, states
+    for bot_index, params, state in zip(
+        index_list, params_list, states
     ):
-        result = inform(bot, message, params, state)
-        if isinstance(result, dict) and "state" in result:
-            states[player_index] = result["state"]
+        result = inform(bots[bot_index], message, params, state)
+        if isinstance(result, dict):
+            if "state" in result:
+                states[bot_index] = result["state"]
+            if "log" in result and isinstance(result["log"], list):
+                log[bot_index].extend(result["log"])
+        
 
 
 def card_tuple_to_str(card_tuple: Optional[Tuple[int, int]]) -> str:
@@ -452,7 +458,7 @@ def advance_game_step(
                 if "state" in result:
                     bot_states[player_index] = result["state"]
                 if "log" in result:
-                    log[player_index].append(result["log"])
+                    log[player_index].extend(result["log"])
                 if "status" in result:
                     set_status(player_index, result["status"])
         did_game_init_occur = True
@@ -462,10 +468,12 @@ def advance_game_step(
         print(f"real cards = {cards_to_hand}")
         # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
         inform_all(
-            [bots[i] for i in get_active_players()],
+            bots,
+            get_active_players(),
             (Input_actions.TAKE_PASSIVE, defender, tuple(cards_to_hand)),
             get_params_list(),
-            [bot_states[i] for i in get_active_players()],
+            bot_states,
+            log
         )
         for card in cards_to_hand:
             hands[defender].append(card)
@@ -480,10 +488,12 @@ def advance_game_step(
             if len(hand) == 0 and status[i] != "WON":
                 status[i] = "WON"
                 inform_all(
-                    [bots[i] for i in get_active_players()],
+                    bots,
+                    get_active_players(),
                     (Input_actions.WINNER_PASSIVE, curr_player),
                     get_params_list(),
-                    [bot_states[i] for i in get_active_players()],
+                    bot_states,
+                    log
                 )
                 log[i].append("Player has WON!")
         # Remove all players who have won from the round (but keep them in the state for UI)
@@ -527,6 +537,10 @@ def advance_game_step(
     def add_log(bot_idx, entry):
         if 0 <= bot_idx < len(log):
             log[bot_idx].append(entry)
+    
+    def add_logs(bot_idx, entries):
+        if 0 <= bot_idx < len(log):
+            log[bot_idx].extend(entries)
 
     # Helper to set a status entry for a specific bot
     def set_status(bot_idx, entry):
@@ -544,10 +558,12 @@ def advance_game_step(
             burned_cards = tuple(real_cards(table_attack + table_defence))
             num_of_burned_cards += len(burned_cards)
             inform_all(
-                [bots[i] for i in get_active_players()],
+                bots,
+                get_active_players(),
                 (Input_actions.BURN, burned_cards),
                 get_params_list(),
-                [bot_states[i] for i in get_active_players()],
+                bot_states,
+                log
             )
             state["burn"] = True
             add_log(
@@ -586,11 +602,11 @@ def advance_game_step(
             # If bot returns dict, extract log/status
             if isinstance(result, dict):
                 action = result.get("action")
-                bot_log = result.get("log")
+                bot_logs = result.get("log")
                 bot_status = result.get("status")
                 bot_states[curr_player] = result.get("state", bot_states[curr_player])
-                if bot_log:
-                    add_log(curr_player, bot_log)
+                if bot_logs:
+                    add_logs(curr_player, bot_logs)
                 if bot_status:
                     set_status(curr_player, bot_status)
             else:
@@ -610,7 +626,8 @@ def advance_game_step(
                     )
                     if len(successful_defending_cards) > 0:
                         inform_all(
-                            [bots[i] for i in get_active_players()],
+                            bots,
+                            get_active_players(),
                             (
                                 Input_actions.DEFENCE_PASSIVE,
                                 curr_player,
@@ -618,7 +635,8 @@ def advance_game_step(
                                 successful_index_list,
                             ),
                             get_params_list(),
-                            [bot_states[i] for i in get_active_players()],
+                            bot_states,
+                            log
                         )
                         add_log(
                             curr_player,
@@ -654,14 +672,16 @@ def advance_game_step(
                         )
                         if len(successful_forwarding_card_list) > 0:
                             inform_all(
-                                [bots[i] for i in get_active_players()],
+                                bots,
+                                get_active_players(),
                                 (
                                     Input_actions.FORWARD_PASSIVE,
                                     defender,
                                     successful_forwarding_card_list,
                                 ),
                                 get_params_list(),
-                                [bot_states[i] for i in get_active_players()],
+                                bot_states,
+                                log
                             )
                             add_log(
                                 defender,
@@ -726,11 +746,11 @@ def advance_game_step(
             result = Output_actions.PASS
         if isinstance(result, dict):
             action = result.get("action")
-            bot_log = result.get("log")
+            bot_logs = result.get("log")
             bot_status = result.get("status")
             bot_states[curr_player] = result.get("state", bot_states[curr_player])
-            if bot_log:
-                add_log(curr_player, bot_log)
+            if bot_logs:
+                add_logs(curr_player, bot_logs)
             if bot_status:
                 set_status(curr_player, bot_status)
         else:
@@ -756,14 +776,16 @@ def advance_game_step(
                     f"line {currentframe().f_lineno}: First attack is successful, attacking cards: {successful_attacking_cards}"
                 )
                 inform_all(
-                    [bots[i] for i in get_active_players()],
+                    bots,
+                    get_active_players(),
                     (
                         Input_actions.FIRST_ATTACK_PASSIVE,
                         curr_player,
                         successful_attacking_cards,
                     ),
                     get_params_list(),
-                    [bot_states[i] for i in get_active_players()],
+                    bot_states,
+                    log
                 )
                 add_log(
                     curr_player,
@@ -784,14 +806,16 @@ def advance_game_step(
                         random_card
                     ], "Forced attack should always succeed"
                     inform_all(
-                        [bots[i] for i in get_active_players()],
+                        bots,
+                        get_active_players(),
                         (
                             Input_actions.FIRST_ATTACK_PASSIVE,
                             curr_player,
                             [random_card],
                         ),
                         get_params_list(),
-                        [bot_states[i] for i in get_active_players()],
+                        bot_states,
+                        log
                     )
                     add_log(
                         curr_player,
@@ -815,14 +839,16 @@ def advance_game_step(
 
             if is_succesful_attack:
                 inform_all(
-                    [bots[i] for i in get_active_players()],
+                    bots,
+                    get_active_players(),
                     (
                         Input_actions.OPTIONAL_ATTACK_PASSIVE,
                         curr_player,
                         successful_attacking_cards,
                     ),
                     get_params_list(),
-                    [bot_states[i] for i in get_active_players()],
+                    bot_states,
+                    log
                 )
                 add_log(
                     curr_player,
@@ -830,10 +856,12 @@ def advance_game_step(
                 )
             else:
                 inform_all(
-                    [bots[i] for i in get_active_players()],
+                    bots,
+                    get_active_players(),
                     (Input_actions.PASS_PASSIVE, curr_player),
                     get_params_list(),
-                    [bot_states[i] for i in get_active_players()],
+                    bot_states,
+                    log
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
                 print(

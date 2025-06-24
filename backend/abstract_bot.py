@@ -117,6 +117,10 @@ class AbstractBot(ABC):
     def get_raw_events(self) -> List[Tuple]:
         """Get all the raw events that the bot has received, by order."""
         return self.__events if hasattr(self, "__events") else []
+    
+    def log(self, message: str):
+        if isinstance(message, str):
+            self.__logs.append(message)
 
     def call(
         self,
@@ -139,6 +143,7 @@ class AbstractBot(ABC):
         self.__table_defence = table_defence
         self.__cards_per_hand = cards_per_hand
         self.__defender = curr_defender
+        self.__logs = []
         ret_dict = {}
         match action:
             case Input_actions.OPTIONAL_ATTACK:
@@ -187,4 +192,5 @@ class AbstractBot(ABC):
             case _:
                 raise ValueError(f"Unknown action: {action}")
         ret_dict["state"] = self.__dict__
+        ret_dict["log"] = self.__logs
         return ret_dict
