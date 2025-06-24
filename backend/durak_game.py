@@ -4,6 +4,8 @@ from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
 from multiprocessing import Queue, Process, reduction
 from dill import Pickler
+from time import time
+import signal
 
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
@@ -11,6 +13,7 @@ MAX_ATTACK_SIZE_AFTER_BURN: int = 6
 MAX_TIME_PER_TURN: float = 0.1
 RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 SUITS: List[str] = ["♣", "♦", "♥", "♠"]
+USE_TIMING: bool = True
 
 
 def pretty_print_state(state):
@@ -56,7 +59,21 @@ def __call_bot_subprocess(q, bot, args, kwargs):
 
 
 def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
-    return bot.call(*args, **kwargs)
+    if not USE_TIMING:
+        return bot.call(*args, **kwargs)
+    def raise_timeout_error():
+        raise TimeoutError
+    signal.signal(signal.SIGALRM, raise_timeout_error)
+    signal.alarm(timeout)
+    try:
+        return bot.call(*args, **kwargs)
+    except TimeoutError as e:
+        print("Player timed out!")
+        return None
+    except Exception as e:
+        return None
+    finally:
+        signal.alarm(0)
     # TODO: Implement timeout handling
     # I'm working on a multiprocessing solution to handle timeouts, It will change a lot, so I'm pushing it like this for now
     # reduction.ForkingPickler = Pickler
