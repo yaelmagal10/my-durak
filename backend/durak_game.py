@@ -3,7 +3,7 @@ from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
 from multiprocessing import Queue, Process, reduction
-from dill import Pickler
+from dill import Pickler  # Dependecy
 
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
@@ -44,8 +44,9 @@ def card_str_to_tuple(card_str: Optional[str]) -> Optional[Tuple[int, int]]:
         suit = card_str[1]
     return (RANKS.index(rank), SUITS.index(suit))
 
+
 def __call_bot_subprocess(q, bot, args, kwargs):
-    f=open("file.txt","w")
+    f = open("file.txt", "w")
     f.write("Subprocess started\n")
     f.close()
     try:
@@ -352,7 +353,7 @@ def advance_game_step(
     # pretty_print_state(state)
 
     ##-----BAD CONFIGURATIONS---##
-    # state["deck"] = state["deck"][-3:]
+    # state["deck"] = []  # state["deck"][-3:]
     # CARDS_PER_HAND = 3
     ##--------------------------##
 
@@ -364,6 +365,7 @@ def advance_game_step(
     defender = state["defender"]
     hands = [card_list_strs_to_tuples(h) for h in state["hands"]]
     print("hands:", hands)
+
     def get_next_player(idx: int) -> int:
         deck = state.get("deck", [])
         if deck:
@@ -373,6 +375,7 @@ def advance_game_step(
             if len(hands[ni]) > 0:
                 return ni
         return idx
+
     table_attack = [card_str_to_tuple(c) for c in state["table_attack"]]
     table_defence = [card_str_to_tuple(c) for c in state["table_defence"]]
     max_attack_size = min(

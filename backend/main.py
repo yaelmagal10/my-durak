@@ -177,12 +177,11 @@ async def create_game(request: Request):
     deck = shuffle(create_deck())
     # print("Currently using a fixed deck (DECK1) for testing")
     # deck = DECK1
-    deck_str = "8,0 1,2 4,1 5,0 11,3 2,2 12,3 11,2 6,3 2,1 2,3 5,1 11,0 11,1 1,1 4,0 0,0 7,3 2,0 7,0 12,2 4,2 7,2 10,1 10,3 10,0 0,3 4,3 12,1 0,1 8,3 3,0 9,1 1,3 8,1 3,1 5,3 9,0 10,2 6,0 9,2 7,1 6,2 0,2 9,3 6,1 8,2 12,0 3,3 1,0 3,2 5,2"
-    deck = [
-        tuple([int(x) for x in s.split(",")])
-        for s in deck_str.split()
-    ]
-    deck = [{"rank": RANKS[c[0]], "suit": SUITS[c[1]]} for c in deck]
+    is_fixed_deck = False
+    if is_fixed_deck:
+        deck_str = "8,0 1,2 4,1 5,0 11,3 2,2 12,3 11,2 6,3 2,1 2,3 5,1 11,0 11,1 1,1 4,0 0,0 7,3 2,0 7,0 12,2 4,2 7,2 10,1 10,3 10,0 0,3 4,3 12,1 0,1 8,3 3,0 9,1 1,3 8,1 3,1 5,3 9,0 10,2 6,0 9,2 7,1 6,2 0,2 9,3 6,1 8,2 12,0 3,3 1,0 3,2 5,2"
+        deck = [tuple([int(x) for x in s.split(",")]) for s in deck_str.split()]
+        deck = [{"rank": RANKS[c[0]], "suit": SUITS[c[1]]} for c in deck]
 
     print(deck)
     trump_card_obj = deck[-1]
@@ -266,7 +265,7 @@ async def step_game(game_id: str):
 max_steps_achieved = 0
 
 
-def main(to_print=False):
+def main(to_print: bool = False, randomize_order: bool = False):
     global max_steps_achieved
 
     import argparse
