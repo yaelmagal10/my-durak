@@ -5,14 +5,13 @@ class BeginnerBot(AbstractBot):
     """A beginner bot that plays a simple strategy."""
 
     def game_init(
-        self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple
+        self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple, first_player: int, lowest_kozar: int
     ):
         print("BeginnerBot: game_init called")
         ordered_suits = [0, 1, 2, 3]
         ordered_suits[self.get_kozar_suit()] = 3
         ordered_suits[3] = self.get_kozar_suit()
         self.card_order = [(i, suit) for suit in ordered_suits for i in range(13)]
-        print(f"card_order: {self.card_order}")
 
     def remove_Nones(self, lst):
         """Remove None values from a list."""

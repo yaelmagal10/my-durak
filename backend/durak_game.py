@@ -4,13 +4,16 @@ from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
 from multiprocessing import Queue, Process, reduction
 from dill import Pickler  # Dependecy
+from time import time, sleep
+import signal
 
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
-MAX_TIME_PER_TURN: float = 0.1
+MAX_TIME_PER_TURN: float = 0.01
 RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 SUITS: List[str] = ["♣", "♦", "♥", "♠"]
+USE_TIMING: bool = True
 
 
 def pretty_print_state(state):
@@ -57,7 +60,26 @@ def __call_bot_subprocess(q, bot, args, kwargs):
 
 
 def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
-    return bot.call(*args, **kwargs)
+    if not USE_TIMING:
+        return bot.call(*args, **kwargs)
+
+    def raise_timeout_error(*args):
+        raise TimeoutError
+
+    signal.signal(signal.SIGALRM, raise_timeout_error)
+    signal.setitimer(signal.ITIMER_REAL, timeout)
+    try:
+        return bot.call(*args, **kwargs)
+    except TimeoutError as e:
+        if not str(type(bot)).split("'")[1].startswith("14"):
+            print("Player timed out! " * 100, type(bot))
+        # sleep(1)
+        return None
+    except Exception as e:
+        print("Exception in bot:", e)
+        return None
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
     # TODO: Implement timeout handling
     # I'm working on a multiprocessing solution to handle timeouts, It will change a lot, so I'm pushing it like this for now
     # reduction.ForkingPickler = Pickler
@@ -95,17 +117,20 @@ def inform(player_bot: Any, message: Any, params: Tuple, state: Any) -> Any:
 
 
 def inform_all(
-    bot_list: List[Any],
+    bots: List[Any],
+    index_list: List[int],
     message: Any,
     params_list: List[Tuple],
     states: List[Any],
+    log: List[List[str]],
 ) -> None:
-    for player_index, bot, params, state in zip(
-        range(len(bot_list)), bot_list, params_list, states
-    ):
-        result = inform(bot, message, params, state)
-        if isinstance(result, dict) and "state" in result:
-            states[player_index] = result["state"]
+    for bot_index, params, state in zip(index_list, params_list, states):
+        result = inform(bots[bot_index], message, params, state)
+        if isinstance(result, dict):
+            if "state" in result:
+                states[bot_index] = result["state"]
+            if "log" in result and isinstance(result["log"], list):
+                log[bot_index].extend(result["log"])
 
 
 def card_tuple_to_str(card_tuple: Optional[Tuple[int, int]]) -> str:
@@ -363,6 +388,7 @@ def advance_game_step(
     num_of_burned_cards = state["num_of_burned_cards"]
     attacker = state["attacker"]
     defender = state["defender"]
+    lowest_trump = state["lowest_trump"]
     hands = [card_list_strs_to_tuples(h) for h in state["hands"]]
     print("hands:", hands)
 
@@ -375,6 +401,10 @@ def advance_game_step(
             if len(hands[ni]) > 0:
                 return ni
         return idx
+
+    def get_active_players():
+        deck = state.get("deck", [])
+        return [i for i in range(num_of_players) if deck or len(hands[i]) != 0]
 
     table_attack = [card_str_to_tuple(c) for c in state["table_attack"]]
     table_defence = [card_str_to_tuple(c) for c in state["table_defence"]]
@@ -405,8 +435,14 @@ def advance_game_step(
 
     def get_params_list():
         return [
-            (hands[player_index], table_attack, table_defence)
-            for player_index in range(num_of_players)
+            (
+                hands[player_index],
+                table_attack,
+                table_defence,
+                [len(hand) for hand in hands],
+                defender,
+            )
+            for player_index in get_active_players()
         ]
 
     if not did_game_init_occur:
@@ -421,6 +457,8 @@ def advance_game_step(
                     player_index,
                     hands[player_index],
                     card_str_to_tuple(state["trump_card"]),
+                    attacker,
+                    lowest_trump,
                 ),
                 params_list[player_index],
                 bot_states[player_index],
@@ -429,7 +467,7 @@ def advance_game_step(
                 if "state" in result:
                     bot_states[player_index] = result["state"]
                 if "log" in result:
-                    log[player_index].append(result["log"])
+                    log[player_index].extend(result["log"])
                 if "status" in result:
                     set_status(player_index, result["status"])
         did_game_init_occur = True
@@ -440,9 +478,11 @@ def advance_game_step(
         # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
         inform_all(
             bots,
+            get_active_players(),
             (Input_actions.TAKE_PASSIVE, defender, tuple(cards_to_hand)),
             get_params_list(),
             bot_states,
+            log,
         )
         for card in cards_to_hand:
             hands[defender].append(card)
@@ -458,9 +498,11 @@ def advance_game_step(
                 status[i] = "WON"
                 inform_all(
                     bots,
-                    (Input_actions.PASS_PASSIVE, curr_player),
+                    get_active_players(),
+                    (Input_actions.WINNER_PASSIVE, curr_player),
                     get_params_list(),
                     bot_states,
+                    log,
                 )
                 log[i].append("Player has WON!")
         # Remove all players who have won from the round (but keep them in the state for UI)
@@ -505,6 +547,10 @@ def advance_game_step(
         if 0 <= bot_idx < len(log):
             log[bot_idx].append(entry)
 
+    def add_logs(bot_idx, entries):
+        if 0 <= bot_idx < len(log):
+            log[bot_idx].extend(entries)
+
     # Helper to set a status entry for a specific bot
     def set_status(bot_idx, entry):
         if 0 <= bot_idx < len(status):
@@ -522,9 +568,11 @@ def advance_game_step(
             num_of_burned_cards += len(burned_cards)
             inform_all(
                 bots,
+                get_active_players(),
                 (Input_actions.BURN, burned_cards),
                 get_params_list(),
                 bot_states,
+                log,
             )
             state["burn"] = True
             add_log(
@@ -550,6 +598,8 @@ def advance_game_step(
                     hand,
                     table_attack,
                     table_defence,
+                    [len(hand) for hand in hands],
+                    defender,
                     bot_states[curr_player],
                 )
             except Exception as e:
@@ -561,11 +611,11 @@ def advance_game_step(
             # If bot returns dict, extract log/status
             if isinstance(result, dict):
                 action = result.get("action")
-                bot_log = result.get("log")
+                bot_logs = result.get("log")
                 bot_status = result.get("status")
                 bot_states[curr_player] = result.get("state", bot_states[curr_player])
-                if bot_log:
-                    add_log(curr_player, bot_log)
+                if bot_logs:
+                    add_logs(curr_player, bot_logs)
                 if bot_status:
                     set_status(curr_player, bot_status)
             else:
@@ -586,6 +636,7 @@ def advance_game_step(
                     if len(successful_defending_cards) > 0:
                         inform_all(
                             bots,
+                            get_active_players(),
                             (
                                 Input_actions.DEFENCE_PASSIVE,
                                 curr_player,
@@ -594,6 +645,7 @@ def advance_game_step(
                             ),
                             get_params_list(),
                             bot_states,
+                            log,
                         )
                         add_log(
                             curr_player,
@@ -630,6 +682,7 @@ def advance_game_step(
                         if len(successful_forwarding_card_list) > 0:
                             inform_all(
                                 bots,
+                                get_active_players(),
                                 (
                                     Input_actions.FORWARD_PASSIVE,
                                     defender,
@@ -637,6 +690,7 @@ def advance_game_step(
                                 ),
                                 get_params_list(),
                                 bot_states,
+                                log,
                             )
                             add_log(
                                 defender,
@@ -689,6 +743,8 @@ def advance_game_step(
                 hand,
                 table_attack,
                 table_defence,
+                [len(hand) for hand in hands],
+                defender,
                 bot_states[curr_player],
             )
         except Exception as e:
@@ -699,11 +755,11 @@ def advance_game_step(
             result = Output_actions.PASS
         if isinstance(result, dict):
             action = result.get("action")
-            bot_log = result.get("log")
+            bot_logs = result.get("log")
             bot_status = result.get("status")
             bot_states[curr_player] = result.get("state", bot_states[curr_player])
-            if bot_log:
-                add_log(curr_player, bot_log)
+            if bot_logs:
+                add_logs(curr_player, bot_logs)
             if bot_status:
                 set_status(curr_player, bot_status)
         else:
@@ -730,6 +786,7 @@ def advance_game_step(
                 )
                 inform_all(
                     bots,
+                    get_active_players(),
                     (
                         Input_actions.FIRST_ATTACK_PASSIVE,
                         curr_player,
@@ -737,6 +794,7 @@ def advance_game_step(
                     ),
                     get_params_list(),
                     bot_states,
+                    log,
                 )
                 add_log(
                     curr_player,
@@ -758,6 +816,7 @@ def advance_game_step(
                     ], "Forced attack should always succeed"
                     inform_all(
                         bots,
+                        get_active_players(),
                         (
                             Input_actions.FIRST_ATTACK_PASSIVE,
                             curr_player,
@@ -765,6 +824,7 @@ def advance_game_step(
                         ),
                         get_params_list(),
                         bot_states,
+                        log,
                     )
                     add_log(
                         curr_player,
@@ -789,6 +849,7 @@ def advance_game_step(
             if is_succesful_attack:
                 inform_all(
                     bots,
+                    get_active_players(),
                     (
                         Input_actions.OPTIONAL_ATTACK_PASSIVE,
                         curr_player,
@@ -796,6 +857,7 @@ def advance_game_step(
                     ),
                     get_params_list(),
                     bot_states,
+                    log,
                 )
                 add_log(
                     curr_player,
@@ -804,9 +866,11 @@ def advance_game_step(
             else:
                 inform_all(
                     bots,
+                    get_active_players(),
                     (Input_actions.PASS_PASSIVE, curr_player),
                     get_params_list(),
                     bot_states,
+                    log,
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
                 print(
@@ -829,11 +893,11 @@ def advance_game_step(
             if player_index == curr_defender:
                 continue
             for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[player_index]))):
-                hands[player_index].append(deck.pop())
+                hands[player_index].append(deck.pop(0))
                 count_pops += 1
         # Deal to defender last
         for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_defender]))):
-            hands[curr_defender].append(deck.pop())
+            hands[curr_defender].append(deck.pop(0))
             count_pops += 1
         # Update deck in state
         print(f"Dealt {count_pops} cards from deck")

@@ -55,6 +55,8 @@ class AbstractBot(ABC):
         my_index: int,
         hand: List[Tuple[int, int]],
         kozar_card: Tuple[int, int],
+        first_player: int,
+        lowest_kozar: int
     ):
         """Gets called when the game is initialized."""
         pass
@@ -78,24 +80,6 @@ class AbstractBot(ABC):
         To defend, return both lists as described above."""
         pass
 
-    def get_original_index(self, current_index: int) -> int:
-        """Get the original index of a player based on its current index.
-        If something is wrong, return -1."""
-        if not self.__active_players:
-            return -1
-        if current_index < 0 or current_index >= len(self.__active_players):
-            return -1
-        return self.__active_players[current_index]
-
-    def get_current_index(self, original_index: int) -> int:
-        """Get the current index of a player based on its original index.
-        If something is wrong, return -1."""
-        if not self.__active_players:
-            return -1
-        if original_index not in self.__active_players:
-            return -1
-        return self.__active_players.index(original_index)
-
     def get_hand(self) -> List[Tuple[int, int]]:
         """Get the current hand of the bot."""
         return self.__hand
@@ -115,14 +99,28 @@ class AbstractBot(ABC):
     def get_table_defence(self) -> List[Tuple[int, int]]:
         """Get the current defending cards on the table."""
         return self.__table_defence
+    
+    def get_current_attacker(self) -> int:
+        return self.__attacker
+    
+    def get_current_defender(self) -> int:
+        return self.__defender
 
     def get_my_index(self) -> int:
         """Get the index of the bot in the game."""
         return self.__my_index if hasattr(self, "__my_index") else -1
+    
+    def get_num_cards_per_hand(self) -> List[int]:
+        """Get the amount of cards in each hand."""
+        return self.__cards_per_hand
 
     def get_raw_events(self) -> List[Tuple]:
         """Get all the raw events that the bot has received, by order."""
         return self.__events if hasattr(self, "__events") else []
+    
+    def log(self, message: str):
+        if isinstance(message, str):
+            self.__logs.append(message)
 
     def call(
         self,
@@ -130,6 +128,8 @@ class AbstractBot(ABC):
         hand: List,
         table_attack: List,
         table_defence: List,
+        cards_per_hand: List[int],
+        curr_defender: int,
         state: Dict[str, Any],
     ):
         # print(f"state given is: {state}")
@@ -141,6 +141,9 @@ class AbstractBot(ABC):
         self.__hand = hand
         self.__table_attack = table_attack
         self.__table_defence = table_defence
+        self.__cards_per_hand = cards_per_hand
+        self.__defender = curr_defender
+        self.__logs = []
         ret_dict = {}
         match action:
             case Input_actions.OPTIONAL_ATTACK:
@@ -150,6 +153,7 @@ class AbstractBot(ABC):
                 else:
                     ret_dict["action"] = [Output_actions.ATTACK, cards]
             case Input_actions.FIRST_ATTACK:
+                self.__attacker = self.__my_index
                 cards = self.first_attack()
                 ret_dict["action"] = [Output_actions.ATTACK, cards]
             case Input_actions.DEFENCE:
@@ -163,6 +167,7 @@ class AbstractBot(ABC):
             case Input_actions.OPTIONAL_ATTACK_PASSIVE:
                 self.listen_optional_attack(event[1], event[2])
             case Input_actions.FIRST_ATTACK_PASSIVE:
+                self.__attacker = event[1]
                 self.listen_first_attack(event[1], event[2])
             case Input_actions.DEFENCE_PASSIVE:
                 self.listen_defence(event[1], event[2], event[3])
@@ -177,15 +182,15 @@ class AbstractBot(ABC):
             case Input_actions.TO_HAND:
                 self.listen_cards_drawn_to_hand(event[1])
             case Input_actions.GAME_INIT:
-                self.__active_players = [i for i in range(event[1])]
                 self.__my_index = event[2]
                 self.__hand = event[3]
                 self.__kozar_card = event[4]
-                self.game_init(event[1], event[2], event[3], event[4])
+                self.__attacker = event[5]
+                self.game_init(event[1], event[2], event[3], event[4], event[5], event[6])
             case Input_actions.WINNER_PASSIVE:
-                self.__active_players.pop(event[1])
                 self.listen_winner(event[1])
             case _:
                 raise ValueError(f"Unknown action: {action}")
         ret_dict["state"] = self.__dict__
+        ret_dict["log"] = self.__logs
         return ret_dict
