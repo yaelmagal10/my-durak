@@ -393,6 +393,9 @@ def advance_game_step(
             if len(hands[ni]) > 0:
                 return ni
         return idx
+    def get_active_players():
+        deck = state.get("deck", [])
+        return [i for i in range(num_of_players) if deck or len(hands[i]) != 0]
     table_attack = [card_str_to_tuple(c) for c in state["table_attack"]]
     table_defence = [card_str_to_tuple(c) for c in state["table_defence"]]
     max_attack_size = min(
@@ -423,7 +426,7 @@ def advance_game_step(
     def get_params_list():
         return [
             (hands[player_index], table_attack, table_defence)
-            for player_index in range(num_of_players)
+            for player_index in get_active_players()
         ]
 
     if not did_game_init_occur:
@@ -458,10 +461,10 @@ def advance_game_step(
         print(f"real cards = {cards_to_hand}")
         # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
         inform_all(
-            bots,
+            [bots[i] for i in get_active_players()],
             (Input_actions.TAKE_PASSIVE, defender, tuple(cards_to_hand)),
             get_params_list(),
-            bot_states,
+            [bot_states[i] for i in get_active_players()],
         )
         for card in cards_to_hand:
             hands[defender].append(card)
@@ -476,10 +479,10 @@ def advance_game_step(
             if len(hand) == 0 and status[i] != "WON":
                 status[i] = "WON"
                 inform_all(
-                    bots,
+                    [bots[i] for i in get_active_players()],
                     (Input_actions.WINNER_PASSIVE, curr_player),
                     get_params_list(),
-                    bot_states,
+                    [bot_states[i] for i in get_active_players()],
                 )
                 log[i].append("Player has WON!")
         # Remove all players who have won from the round (but keep them in the state for UI)
@@ -540,10 +543,10 @@ def advance_game_step(
             burned_cards = tuple(real_cards(table_attack + table_defence))
             num_of_burned_cards += len(burned_cards)
             inform_all(
-                bots,
+                [bots[i] for i in get_active_players()],
                 (Input_actions.BURN, burned_cards),
                 get_params_list(),
-                bot_states,
+                [bot_states[i] for i in get_active_players()],
             )
             state["burn"] = True
             add_log(
@@ -604,7 +607,7 @@ def advance_game_step(
                     )
                     if len(successful_defending_cards) > 0:
                         inform_all(
-                            bots,
+                            [bots[i] for i in get_active_players()],
                             (
                                 Input_actions.DEFENCE_PASSIVE,
                                 curr_player,
@@ -612,7 +615,7 @@ def advance_game_step(
                                 successful_index_list,
                             ),
                             get_params_list(),
-                            bot_states,
+                            [bot_states[i] for i in get_active_players()],
                         )
                         add_log(
                             curr_player,
@@ -648,14 +651,14 @@ def advance_game_step(
                         )
                         if len(successful_forwarding_card_list) > 0:
                             inform_all(
-                                bots,
+                                [bots[i] for i in get_active_players()],
                                 (
                                     Input_actions.FORWARD_PASSIVE,
                                     defender,
                                     successful_forwarding_card_list,
                                 ),
                                 get_params_list(),
-                                bot_states,
+                                [bot_states[i] for i in get_active_players()],
                             )
                             add_log(
                                 defender,
@@ -748,14 +751,14 @@ def advance_game_step(
                     f"line {currentframe().f_lineno}: First attack is successful, attacking cards: {successful_attacking_cards}"
                 )
                 inform_all(
-                    bots,
+                    [bots[i] for i in get_active_players()],
                     (
                         Input_actions.FIRST_ATTACK_PASSIVE,
                         curr_player,
                         successful_attacking_cards,
                     ),
                     get_params_list(),
-                    bot_states,
+                    [bot_states[i] for i in get_active_players()],
                 )
                 add_log(
                     curr_player,
@@ -776,14 +779,14 @@ def advance_game_step(
                         random_card
                     ], "Forced attack should always succeed"
                     inform_all(
-                        bots,
+                        [bots[i] for i in get_active_players()],
                         (
                             Input_actions.FIRST_ATTACK_PASSIVE,
                             curr_player,
                             [random_card],
                         ),
                         get_params_list(),
-                        bot_states,
+                        [bot_states[i] for i in get_active_players()],
                     )
                     add_log(
                         curr_player,
@@ -807,14 +810,14 @@ def advance_game_step(
 
             if is_succesful_attack:
                 inform_all(
-                    bots,
+                    [bots[i] for i in get_active_players()],
                     (
                         Input_actions.OPTIONAL_ATTACK_PASSIVE,
                         curr_player,
                         successful_attacking_cards,
                     ),
                     get_params_list(),
-                    bot_states,
+                    [bot_states[i] for i in get_active_players()],
                 )
                 add_log(
                     curr_player,
@@ -822,10 +825,10 @@ def advance_game_step(
                 )
             else:
                 inform_all(
-                    bots,
+                    [bots[i] for i in get_active_players()],
                     (Input_actions.PASS_PASSIVE, curr_player),
                     get_params_list(),
-                    bot_states,
+                    [bot_states[i] for i in get_active_players()],
                 )
                 add_log(curr_player, f"Player {curr_player+1} passes")
                 print(
