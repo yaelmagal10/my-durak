@@ -177,14 +177,19 @@ async def create_game(request: Request):
     deck = shuffle(create_deck())
     # print("Currently using a fixed deck (DECK1) for testing")
     # deck = DECK1
-    deck_str = "8,0 1,2 4,1 5,0 11,3 2,2 12,3 11,2 6,3 2,1 2,3 5,1 11,0 11,1 1,1 4,0 0,0 7,3 2,0 7,0 12,2 4,2 7,2 10,1 10,3 10,0 0,3 4,3 12,1 0,1 8,3 3,0 9,1 1,3 8,1 3,1 5,3 9,0 10,2 6,0 9,2 7,1 6,2 0,2 9,3 6,1 8,2 12,0 3,3 1,0 3,2 5,2"
-    deck = [
-        tuple([int(x) for x in s.split(",")])
-        for s in deck_str.split()
-    ]
-    deck = [{"rank": RANKS[c[0]], "suit": SUITS[c[1]]} for c in deck]
+    
+    # deck_str = "6,0 1,3 3,3 10,1 0,3 2,1 4,0 9,1 0,0 10,3 8,1 1,1 6,2 12,0 7,0 11,0 5,1 7,3 2,2 8,0 9,0 12,3 10,2 10,0 8,3 6,3 2,0 9,3 3,2 0,2 11,3 9,2 11,1 4,3 1,2 1,0 6,1 7,2 0,1 3,0 5,3 3,1 8,2 5,0 12,2 4,1 4,2 12,1 7,1 2,3 5,2 11,2"
+    # deck = [
+    #     tuple([int(x) for x in s.split(",")])
+    #     for s in deck_str.split()
+    # ]
+    # deck = [{"rank": RANKS[c[0]], "suit": SUITS[c[1]]} for c in deck]
 
     print(deck)
+    with open("deck.txt", "w") as file:
+        for c in deck:
+            r, s = card_str_to_tuple(f"{c['rank']}{c['suit']}")
+            file.write(f"{r},{s} ")
     trump_card_obj = deck[-1]
     trump_card = f"{trump_card_obj['rank']}{trump_card_obj['suit']}"
     trump_suit = trump_card_obj["suit"]

@@ -474,7 +474,7 @@ def advance_game_step(
                 status[i] = "WON"
                 inform_all(
                     bots,
-                    (Input_actions.PASS_PASSIVE, curr_player),
+                    (Input_actions.WINNER_PASSIVE, curr_player),
                     get_params_list(),
                     bot_states,
                 )
@@ -845,11 +845,11 @@ def advance_game_step(
             if player_index == curr_defender:
                 continue
             for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[player_index]))):
-                hands[player_index].append(deck.pop())
+                hands[player_index].append(deck.pop(0))
                 count_pops += 1
         # Deal to defender last
         for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_defender]))):
-            hands[curr_defender].append(deck.pop())
+            hands[curr_defender].append(deck.pop(0))
             count_pops += 1
         # Update deck in state
         print(f"Dealt {count_pops} cards from deck")
