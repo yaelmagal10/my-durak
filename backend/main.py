@@ -171,9 +171,7 @@ def delete_bot(filename: str):
         )
 
 
-@app.post("/api/games", response_model=GameState)
-async def create_game(request: Request):
-    bot_filenames = await request.json()
+def create_game_state(num_bots):
     deck = shuffle(create_deck())
     # print("Currently using a fixed deck (DECK1) for testing")
     # deck = DECK1
@@ -193,7 +191,45 @@ async def create_game(request: Request):
     trump_card_obj = deck[-1]
     trump_card = f"{trump_card_obj['rank']}{trump_card_obj['suit']}"
     trump_suit = trump_card_obj["suit"]
-    hands = deal_players(deck, len(bot_filenames))
+    hands = deal_players(deck, num_bots)
+    # Find attacker: player with the lowest trump card (lowest rank of trump suit)
+    lowest_trump = 20
+    attacker = 0
+    trump_rank_order = RANKS
+    for i, hand in enumerate(hands):
+        trump_cards = [
+            trump_rank_order.index(c["rank"]) for c in hand if c["suit"] == trump_suit
+        ]
+        if trump_cards:
+            min_trump = min(trump_cards)
+            if min_trump < lowest_trump:
+                lowest_trump = min_trump
+                attacker = i
+    if lowest_trump > len(trump_rank_order):
+        lowest_trump = -1
+    defender = (attacker + 1) % num_bots
+    return {
+        "trump_suit": trump_suit,
+        "trump_card": trump_card,  # always a string like '7♠'
+        "lowest_trump": lowest_trump, # if there is no trump, it is marked as -1.
+        "hands": [[f"{c['rank']}{c['suit']}" for c in h] for h in hands],
+        "table_attack": [],
+        "table_defence": [],
+        "attacker": attacker,
+        "defender": defender,
+        "curr_player": attacker,
+        "log": [[] for _ in range(num_bots)],  # log is now a list of lists, one per bot
+        "bot_states": [{} for _ in range(num_bots)],
+        "burn": False,
+        "num_of_burned_cards": 0,
+        "deck": [f"{c['rank']}{c['suit']}" for c in deck],
+        "deck_count": len(deck),  # Add deck count to state
+    }
+
+
+@app.post("/api/games", response_model=GameState)
+async def create_game(request: Request):
+    bot_filenames = await request.json()
     bots = []
     bot_names = []
     for fname in bot_filenames:
@@ -210,37 +246,7 @@ async def create_game(request: Request):
         if not bot_name:
             bot_name = fname.split("_", 1)[-1].replace(".py", "")
         bot_names.append(bot_name)
-    # Find attacker: player with the lowest trump card (lowest rank of trump suit)
-    lowest_trump = 20
-    attacker = 0
-    trump_rank_order = RANKS
-    for i, hand in enumerate(hands):
-        trump_cards = [
-            trump_rank_order.index(c["rank"]) for c in hand if c["suit"] == trump_suit
-        ]
-        if trump_cards:
-            min_trump = min(trump_cards)
-            if min_trump < lowest_trump:
-                lowest_trump = min_trump
-                attacker = i
-    defender = (attacker + 1) % len(bots)
-    state = {
-        "trump_suit": trump_suit,
-        "trump_card": trump_card,  # always a string like '7♠'
-        "lowest_trump": lowest_trump,
-        "hands": [[f"{c['rank']}{c['suit']}" for c in h] for h in hands],
-        "table_attack": [],
-        "table_defence": [],
-        "attacker": attacker,
-        "defender": defender,
-        "curr_player": attacker,
-        "log": [[] for _ in bots],  # log is now a list of lists, one per bot
-        "bot_states": [{} for _ in bots],
-        "burn": False,
-        "num_of_burned_cards": 0,
-        "deck": [f"{c['rank']}{c['suit']}" for c in deck],
-        "deck_count": len(deck),  # Add deck count to state
-    }
+    state = create_game_state(len(bot_filenames))
     # Pretty print the initial state for debugging
     pretty_print_state(state)
     game_id = uuid.uuid4().hex
@@ -305,57 +311,8 @@ def main(to_print=False):
         bot_names.append(bot_name)
 
     bot_names = [f"Player {i+1}: {bot_names[i]}" for i in range(len(bot_names))]
-    # Create deck and initial state (reuse logic from create_game)
-    deck = shuffle(create_deck())
-    # deck_str = "11,2 12,2 1,3 12,1 4,0 6,2 3,3 3,2 3,1 7,2 11,1 0,1 0,0 3,0 2,3 5,2 10,2 9,0 5,0 9,3 11,0 12,0 8,2 10,1 1,2 1,0 6,1 0,2 6,3 2,2 12,3 9,2 8,3 10,0 4,1 6,0 4,3 9,1 8,0 5,3 4,2 2,0 1,1 8,1 0,3 7,3 10,3 7,0 11,3 5,1 7,1 2,1"
-    # deck = [
-    #     tuple([int(x) for x in s.split(",")])
-    #     for s in deck_str.split()
-    # ]
-    # deck = [{"rank": RANKS[c[0]], "suit": SUITS[c[1]]} for c in deck]
-
-    print(deck)
-    print("line 277")
-    with open("deck.txt", "w") as file:
-        for c in deck:
-            r, s = card_str_to_tuple(f"{c['rank']}{c['suit']}")
-            file.write(f"{r},{s} ")
-    # print("line 281")
-    trump_card_obj = deck[-1]
-    trump_card = f"{trump_card_obj['rank']}{trump_card_obj['suit']}"
-    trump_suit = trump_card_obj["suit"]
-    hands = deal_players(deck, len(bot_filenames))
-    # Build initial state
-    state = {
-        "trump_suit": trump_suit,
-        "trump_card": trump_card,
-        "hands": [[f"{c['rank']}{c['suit']}" for c in h] for h in hands],
-        "table_attack": [],
-        "table_defence": [],
-        "attacker": 0,
-        "defender": 1,
-        "curr_player": 0,
-        "log": [[] for _ in bots],
-        "bot_states": [{} for _ in bots],
-        "burn": False,
-        "num_of_burned_cards": 0,
-        "deck": [f"{c['rank']}{c['suit']}" for c in deck],
-        "deck_count": len(deck),
-    }
-    # Find attacker: player with the lowest trump card
-    lowest_trump = 20
-    trump_rank_order = RANKS
-    for i, hand in enumerate(hands):
-        trump_cards = [
-            trump_rank_order.index(c["rank"]) for c in hand if c["suit"] == trump_suit
-        ]
-        if trump_cards:
-            min_trump = min(trump_cards)
-            if min_trump < lowest_trump:
-                lowest_trump = min_trump
-                state["attacker"] = i
-    state["defender"] = (state["attacker"] + 1) % len(bots)
-    state["curr_player"] = state["attacker"]
+    
+    state = create_game_state(len(bot_filenames))
 
     if to_print:
         print("=== Durak CLI Game ===")
