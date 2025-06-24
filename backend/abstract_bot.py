@@ -80,24 +80,6 @@ class AbstractBot(ABC):
         To defend, return both lists as described above."""
         pass
 
-    def get_original_index(self, current_index: int) -> int:
-        """Get the original index of a player based on its current index.
-        If something is wrong, return -1."""
-        if not self.__active_players:
-            return -1
-        if current_index < 0 or current_index >= len(self.__active_players):
-            return -1
-        return self.__active_players[current_index]
-
-    def get_current_index(self, original_index: int) -> int:
-        """Get the current index of a player based on its original index.
-        If something is wrong, return -1."""
-        if not self.__active_players:
-            return -1
-        if original_index not in self.__active_players:
-            return -1
-        return self.__active_players.index(original_index)
-
     def get_hand(self) -> List[Tuple[int, int]]:
         """Get the current hand of the bot."""
         return self.__hand
