@@ -10,7 +10,7 @@ import signal
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
-MAX_TIME_PER_TURN: float = 0.001
+MAX_TIME_PER_TURN: float = 0.01
 RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 SUITS: List[str] = ["♣", "♦", "♥", "♠"]
 USE_TIMING: bool = True
@@ -73,6 +73,7 @@ def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
         #sleep(1)
         return None
     except Exception as e:
+        print("Exception in bot:", e)
         return None
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
@@ -425,7 +426,7 @@ def advance_game_step(
 
     def get_params_list():
         return [
-            (hands[player_index], table_attack, table_defence)
+            (hands[player_index], table_attack, table_defence, [len(hand) for hand in hands], defender)
             for player_index in get_active_players()
         ]
 
@@ -572,6 +573,8 @@ def advance_game_step(
                     hand,
                     table_attack,
                     table_defence,
+                    [len(hand) for hand in hands],
+                    defender,
                     bot_states[curr_player],
                 )
             except Exception as e:
@@ -711,6 +714,8 @@ def advance_game_step(
                 hand,
                 table_attack,
                 table_defence,
+                [len(hand) for hand in hands],
+                defender,
                 bot_states[curr_player],
             )
         except Exception as e:

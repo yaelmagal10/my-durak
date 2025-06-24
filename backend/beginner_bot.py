@@ -12,7 +12,6 @@ class BeginnerBot(AbstractBot):
         ordered_suits[self.get_kozar_suit()] = 3
         ordered_suits[3] = self.get_kozar_suit()
         self.card_order = [(i, suit) for suit in ordered_suits for i in range(13)]
-        print(f"card_order: {self.card_order}")
 
     def remove_Nones(self, lst):
         """Remove None values from a list."""
