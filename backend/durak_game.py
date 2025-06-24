@@ -4,13 +4,13 @@ from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
 from multiprocessing import Queue, Process, reduction
 from dill import Pickler
-from time import time
+from time import time, sleep
 import signal
 
 CARDS_PER_HAND: int = 6
 STARTING_MAX_ATTACK_SIZE: int = 5
 MAX_ATTACK_SIZE_AFTER_BURN: int = 6
-MAX_TIME_PER_TURN: float = 0.1
+MAX_TIME_PER_TURN: float = 0.001
 RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
 SUITS: List[str] = ["♣", "♦", "♥", "♠"]
 USE_TIMING: bool = True
@@ -61,19 +61,21 @@ def __call_bot_subprocess(q, bot, args, kwargs):
 def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
     if not USE_TIMING:
         return bot.call(*args, **kwargs)
-    def raise_timeout_error():
+    def raise_timeout_error(*args):
         raise TimeoutError
     signal.signal(signal.SIGALRM, raise_timeout_error)
-    signal.alarm(timeout)
+    signal.setitimer(signal.ITIMER_REAL, timeout)
     try:
         return bot.call(*args, **kwargs)
     except TimeoutError as e:
-        print("Player timed out!")
+        if not str(type(bot)).split("'")[1].startswith('14'):
+            print("Player timed out! "*100,type(bot))
+        #sleep(1)
         return None
     except Exception as e:
         return None
     finally:
-        signal.alarm(0)
+        signal.setitimer(signal.ITIMER_REAL, 0)
     # TODO: Implement timeout handling
     # I'm working on a multiprocessing solution to handle timeouts, It will change a lot, so I'm pushing it like this for now
     # reduction.ForkingPickler = Pickler
