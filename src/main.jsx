@@ -622,22 +622,7 @@ function GamePage({ onBack, selectedBots }) {
             </div>
             {gameState && gameState.state ? (
                 <>
-                    <CardGameUI
-                        hands={gameState.state.hands}
-                        table_attack={gameState.state.table_attack}
-                        table_defence={gameState.state.table_defence}
-                        log={gameState.state.log}
-                        attacker={gameState.state.attacker}
-                        defender={gameState.state.defender}
-                        bots={gameState.bots}
-                        compact
-                        status={gameState.state.status}
-                        deck_count={gameState.state.deck_count}
-                        trump_card={gameState.state.trump_card}
-                        num_of_burned_cards={gameState.state.num_of_burned_cards}
-                        curr_player={gameState.state.curr_player}
-                    />
-                    <div style={{ marginTop: 12 }}>
+                    <div style={{ marginBottom: 12 }}>
                         {playMode === "step" && (
                             <button
                                 style={{ padding: "6px 18px", fontSize: 15, borderRadius: 6, marginRight: 10 }}
@@ -653,6 +638,21 @@ function GamePage({ onBack, selectedBots }) {
                             Back to Bot Manager
                         </button>
                     </div>
+                    <CardGameUI
+                        hands={gameState.state.hands}
+                        table_attack={gameState.state.table_attack}
+                        table_defence={gameState.state.table_defence}
+                        log={gameState.state.log}
+                        attacker={gameState.state.attacker}
+                        defender={gameState.state.defender}
+                        bots={gameState.bots}
+                        compact
+                        status={gameState.state.status}
+                        deck_count={gameState.state.deck_count}
+                        trump_card={gameState.state.trump_card}
+                        num_of_burned_cards={gameState.state.num_of_burned_cards}
+                        curr_player={gameState.state.curr_player}
+                    />
                 </>
             ) : (
                 <div>Loading game...</div>
