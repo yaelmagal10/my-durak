@@ -6,7 +6,7 @@
 
 import os
 import uuid
-import importlib.util
+import importlib.util, importlib.machinery
 import sys
 import io
 import traceback
@@ -88,7 +88,13 @@ def load_bot(filepath):
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Bot file not found: {filepath}")
     module_name = os.path.splitext(os.path.basename(filepath))[0]
-    spec = importlib.util.spec_from_file_location(module_name, filepath)
+    if filepath.endswith('.py'):
+        spec = importlib.util.spec_from_file_location(module_name, filepath)
+    elif filepath.endswith('.pyc'):
+        loader = importlib.machinery.SourcelessFileLoader(module_name, filepath)
+        spec = importlib.util.spec_from_loader(module_name, loader)
+    else:
+        raise ImportError(f"Unsupported file type for bot file: {filepath}")
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load spec for bot file: {filepath}")
     module = importlib.util.module_from_spec(spec)
@@ -104,8 +110,8 @@ def load_bot(filepath):
 def list_bots():
     bots = []
     for fname in os.listdir(BOTS_DIR):
-        # Exclude __pycache__ and any non-.py files
-        if fname == "__pycache__" or not fname.endswith(".py"):
+        # Exclude __pycache__ and any non-.py or non-.pyc files
+        if fname == "__pycache__" or not (fname.endswith(".py") or fname.endswith(".pyc")):
             continue
         # Try to read the display name from a .name file if it exists
         name_file = os.path.splitext(fname)[0] + ".name"
@@ -114,7 +120,7 @@ def list_bots():
             with open(os.path.join(BOTS_DIR, name_file), "r", encoding="utf-8") as f:
                 name = f.read().strip()
         if not name:
-            name = fname.split("_", 1)[-1].replace(".py", "")
+            name = fname.split("_", 1)[-1].replace(".pyc","").replace(".py", "")
         bots.append(BotInfo(name=name, filename=fname))
     return bots
 
@@ -244,7 +250,7 @@ async def create_game(request: Request):
                 with open(name_file, "r", encoding="utf-8") as f:
                     bot_name = f.read().strip()
         if not bot_name:
-            bot_name = fname.split("_", 1)[-1].replace(".py", "")
+            bot_name = fname.split("_", 1)[-1].replace(".pyc","").replace(".py", "")
         bot_names.append(bot_name)
     state = create_game_state(len(bot_filenames))
     # Pretty print the initial state for debugging
@@ -307,7 +313,7 @@ def main(to_print=False):
                 with open(name_file, "r", encoding="utf-8") as f:
                     bot_name = f.read().strip()
         if not bot_name:
-            bot_name = fname.split("_", 1)[-1].replace(".py", "")
+            bot_name = fname.split("_", 1)[-1].replace(".pyc","").replace(".py", "")
         bot_names.append(bot_name)
 
     bot_names = [f"Player {i+1}: {bot_names[i]}" for i in range(len(bot_names))]

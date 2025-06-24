@@ -179,7 +179,7 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
                     />
                     <input
                         type="file"
-                        accept=".py"
+                        accept=".py, .pyc"
                         onChange={e => setBotFile(e.target.files[0])}
                         style={{
                             flex: 1,
