@@ -4,49 +4,49 @@ from typing import Any, List, Tuple, Dict
 
 
 class AbstractBot(ABC):
-    def listen_optional_attack(
+    def notify_optional_attack(
         self, attacker_index: int, card_list: List[Tuple[int, int]]
     ):
-        """Listen to a non-starting attack from a player."""
+        """Info about a non-starting attack from a player."""
         pass
 
-    def listen_first_attack(
+    def notify_first_attack(
         self, attacker_index: int, card_list: List[Tuple[int, int]]
     ):
-        """Listen to the starting attack from a player."""
+        """Info about the starting attack from a player."""
         pass
 
-    def listen_defence(
+    def notify_defence(
         self,
         defender_index: int,
         defending_cards: List[Tuple[int, int]],
         indexes: List[int],
     ):
-        """Listen to a defence from a player."""
+        """Info about a defence from a player."""
         pass
 
-    def listen_take(self, defender_index: int, card_list: List[Tuple[int, int]]):
-        """Listen to a player taking the attack cards to his hand."""
+    def notify_take(self, defender_index: int, card_list: List[Tuple[int, int]]):
+        """Info about a player taking the attack cards to his hand."""
         pass
 
-    def listen_forward(self, forwarder_index: int, card_list: List[Tuple[int, int]]):
-        """Listen to a player forwarding the attack."""
+    def notify_forward(self, forwarder_index: int, card_list: List[Tuple[int, int]]):
+        """Info about a player forwarding the attack."""
         pass
 
-    def listen_pass(self, passer_index: int):
-        """Listen to a player passing (as an optional attacker)."""
+    def notify_pass(self, passer_index: int):
+        """Info about a player passing (as an optional attacker)."""
         pass
 
-    def listen_burn(self, card_list: List[Tuple[int, int]]):
-        """Listen to a burn of the attack cards."""
+    def notify_burn(self, card_list: List[Tuple[int, int]]):
+        """Info about a burn of the attack cards."""
         pass
 
-    def listen_cards_drawn_to_hand(self, card_list: List[Tuple[int, int]]):
-        """Listen to drawing cards from the deck to my hand."""
+    def notify_cards_drawn_to_hand(self, card_list: List[Tuple[int, int]]):
+        """Info about drawing cards from the deck to my hand."""
         pass
 
-    def listen_winner(self, winner_index: int):
-        """Listen to a player who won the game."""
+    def notify_winner(self, winner_index: int):
+        """Info about a player who won the game."""
         pass
 
     def game_init(
@@ -56,7 +56,7 @@ class AbstractBot(ABC):
         hand: List[Tuple[int, int]],
         kozar_card: Tuple[int, int],
         first_player: int,
-        lowest_kozar: int
+        lowest_kozar: int,
     ):
         """Gets called when the game is initialized."""
         pass
@@ -99,17 +99,17 @@ class AbstractBot(ABC):
     def get_table_defence(self) -> List[Tuple[int, int]]:
         """Get the current defending cards on the table."""
         return self.__table_defence
-    
+
     def get_current_attacker(self) -> int:
         return self.__attacker
-    
+
     def get_current_defender(self) -> int:
         return self.__defender
 
     def get_my_index(self) -> int:
         """Get the index of the bot in the game."""
         return self.__my_index if hasattr(self, "__my_index") else -1
-    
+
     def get_num_cards_per_hand(self) -> List[int]:
         """Get the amount of cards in each hand."""
         return self.__cards_per_hand
@@ -117,7 +117,7 @@ class AbstractBot(ABC):
     def get_raw_events(self) -> List[Tuple]:
         """Get all the raw events that the bot has received, by order."""
         return self.__events if hasattr(self, "__events") else []
-    
+
     def log(self, message: str):
         if isinstance(message, str):
             self.__logs.append(message)
@@ -165,30 +165,32 @@ class AbstractBot(ABC):
                 else:
                     ret_dict["action"] = [Output_actions.DEFEND, cards, indexes]
             case Input_actions.OPTIONAL_ATTACK_PASSIVE:
-                self.listen_optional_attack(event[1], event[2])
+                self.notify_optional_attack(event[1], event[2])
             case Input_actions.FIRST_ATTACK_PASSIVE:
                 self.__attacker = event[1]
-                self.listen_first_attack(event[1], event[2])
+                self.notify_first_attack(event[1], event[2])
             case Input_actions.DEFENCE_PASSIVE:
-                self.listen_defence(event[1], event[2], event[3])
+                self.notify_defence(event[1], event[2], event[3])
             case Input_actions.TAKE_PASSIVE:
-                self.listen_take(event[1], event[2])
+                self.notify_take(event[1], event[2])
             case Input_actions.FORWARD_PASSIVE:
-                self.listen_forward(event[1], event[2])
+                self.notify_forward(event[1], event[2])
             case Input_actions.PASS_PASSIVE:
-                self.listen_pass(event[1])
+                self.notify_pass(event[1])
             case Input_actions.BURN:
-                self.listen_burn(event[1])
+                self.notify_burn(event[1])
             case Input_actions.TO_HAND:
-                self.listen_cards_drawn_to_hand(event[1])
+                self.notify_cards_drawn_to_hand(event[1])
             case Input_actions.GAME_INIT:
                 self.__my_index = event[2]
                 self.__hand = event[3]
                 self.__kozar_card = event[4]
                 self.__attacker = event[5]
-                self.game_init(event[1], event[2], event[3], event[4], event[5], event[6])
+                self.game_init(
+                    event[1], event[2], event[3], event[4], event[5], event[6]
+                )
             case Input_actions.WINNER_PASSIVE:
-                self.listen_winner(event[1])
+                self.notify_winner(event[1])
             case _:
                 raise ValueError(f"Unknown action: {action}")
         ret_dict["state"] = self.__dict__
