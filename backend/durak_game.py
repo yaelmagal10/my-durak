@@ -436,9 +436,9 @@ def advance_game_step(
     def get_params_list():
         return [
             (
-                hands[player_index],
-                table_attack,
-                table_defence,
+                hands[player_index].copy(),
+                table_attack.copy(),
+                table_defence.copy(),
                 [len(hand) for hand in hands],
                 defender,
             )
@@ -596,9 +596,9 @@ def advance_game_step(
                 result = call_bot(
                     bots[curr_player],
                     (Input_actions.DEFENCE,),
-                    hand,
-                    table_attack,
-                    table_defence,
+                    hand.copy(),
+                    table_attack.copy(),
+                    table_defence.copy(),
                     [len(hand) for hand in hands],
                     defender,
                     bot_states[curr_player],
@@ -741,9 +741,9 @@ def advance_game_step(
                         else Input_actions.OPTIONAL_ATTACK
                     ),
                 ),
-                hand,
-                table_attack,
-                table_defence,
+                hand.copy(),
+                table_attack.copy(),
+                table_defence.copy(),
                 [len(hand) for hand in hands],
                 defender,
                 bot_states[curr_player],

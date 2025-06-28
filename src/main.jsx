@@ -547,7 +547,7 @@ function GamePage({ onBack, selectedBots }) {
                                     {botLog && botLog.length > 0
                                         ? botLog.map((entry, eidx) => (
                                             <div key={eidx} style={{ marginBottom: 2 }}>
-                                                {entry}
+                                                {entry.replace(/^\[TS:\d+(\.\d+)?\]/, "")}
                                             </div>
                                         ))
                                         : <div style={{ color: "#a1a1aa" }}>No log yet</div>
