@@ -544,8 +544,9 @@ def advance_game_step(
 
     # Helper to add a log entry for a specific bot
     def add_log(bot_idx, entry):
-        if 0 <= bot_idx < len(log):
-            log[bot_idx].append(entry)
+        if 0 <= bot_idx < len(log) and isinstance(entry, str):
+            ts = time()
+            log[bot_idx].append(f"[TS:{ts}]{entry}")
 
     def add_logs(bot_idx, entries):
         if 0 <= bot_idx < len(log):

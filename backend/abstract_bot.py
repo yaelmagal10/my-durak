@@ -1,6 +1,7 @@
 from durak_actions import Input_actions, Output_actions
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple, Dict
+from time import time
 
 
 class AbstractBot(ABC):
@@ -120,7 +121,8 @@ class AbstractBot(ABC):
 
     def log(self, message: str):
         if isinstance(message, str):
-            self.__logs.append(message)
+            ts = time()
+            self.__logs.append(f"[TS:{ts}]{message}")
 
     def call(
         self,

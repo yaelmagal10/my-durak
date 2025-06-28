@@ -56,41 +56,39 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
     // Flatten all bot logs into a single array for the game log (with bot/player info)
     function getGameLog(log, bots) {
         if (!Array.isArray(log)) return [];
-        // Collect all log entries with their player and order
+
         let entries = [];
         log.forEach((botLog, idx) => {
             if (Array.isArray(botLog)) {
-                botLog.forEach((entry, eidx) => {
+                botLog.forEach((entry) => {
+                    let text = entry;
+                    let timestamp = Number.MAX_SAFE_INTEGER; // fallback if no timestamp
+
+                    // Try to extract [TS:...] at the start
+                    const tsMatch = /^\[TS:(\d+(\.\d+)?)\]/.exec(entry);
+                    if (tsMatch) {
+                        timestamp = parseFloat(tsMatch[1]);
+                        // Remove the timestamp marker from the text
+                        text = entry.replace(/^\[TS:\d+(\.\d+)?\]/, "");
+                    }
+
                     entries.push({
                         player: idx,
                         bot: bots && bots[idx] ? bots[idx] : `Player ${idx + 1}`,
-                        text: entry,
-                        order: eidx,
-                        logIndex: entries.length, // fallback order
+                        text: text,
+                        timestamp: timestamp,
                     });
                 });
             }
         });
-        // Try to order by time: assume log[0][0], log[1][0], ... are in time order if appended in game logic
-        // But since logs are per player, we can't guarantee order unless each entry has a timestamp.
-        // Instead, reconstruct a global log by interleaving by index.
-        // We'll use a round-robin merge by log entry index.
-        let merged = [];
-        let maxLen = Math.max(...log.map(arr => arr.length));
-        for (let i = 0; i < maxLen; ++i) {
-            for (let j = 0; j < log.length; ++j) {
-                if (log[j] && log[j][i] !== undefined) {
-                    merged.push({
-                        player: j,
-                        bot: bots && bots[j] ? bots[j] : `Player ${j + 1}`,
-                        text: log[j][i],
-                        order: i,
-                        logIndex: merged.length,
-                    });
-                }
-            }
-        }
-        return merged;
+
+        // Sort by timestamp
+        entries.sort((a, b) => a.timestamp - b.timestamp);
+
+        // Remove timestamp field before returning (optional)
+        const cleanEntries = entries.map(({ timestamp, ...rest }) => rest);
+
+        return cleanEntries;
     }
 
     // Helper to chunk an array into rows of n
@@ -444,7 +442,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                                         fontWeight: eidx === 0 ? 600 : 400,
                                                     }}
                                                 >
-                                                    {entry}
+                                                    {entry.replace(/^\[TS:\d+(\.\d+)?\]/, "")}
                                                 </div>
                                             ))
                                             : <div style={{ color: "#a1a1aa" }}>No log yet</div>

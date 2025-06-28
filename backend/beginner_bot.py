@@ -7,7 +7,7 @@ class BeginnerBot(AbstractBot):
     def game_init(
         self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple, first_player: int, lowest_kozar: int
     ):
-        print("BeginnerBot: game_init called")
+        self.log("BeginnerBot: game_init called")
         ordered_suits = [0, 1, 2, 3]
         ordered_suits[self.get_kozar_suit()] = 3
         ordered_suits[3] = self.get_kozar_suit()
@@ -44,7 +44,7 @@ class BeginnerBot(AbstractBot):
                 continue
             if card[0] == lowest_card[0]:
                 attacking_cards.append(card)
-        print(f"BeginnerBot: first_attack called, attacking_cards: {attacking_cards}")
+        self.log(f"BeginnerBot: first_attack called, attacking_cards: {attacking_cards}")
         return attacking_cards
 
     def defend(self):
