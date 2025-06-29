@@ -29,7 +29,7 @@ class BasicBot(AbstractBot):
             return []
         return [min(self.hand)] if random.random() < 0.5 else []
 
-    def defend(self) -> Tuple[List[Tuple[int, int]], List[int]]:
+    def defence(self) -> Tuple[List[Tuple[int, int]], List[int]]:
         # Try to defend with the lowest card that can beat the attack
         attack_cards = self.get_table_attack()
         defence = []

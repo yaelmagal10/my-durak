@@ -416,6 +416,7 @@ def advance_game_step(
                 table_defence.copy(),
                 [len(hand) for hand in hands],
                 defender,
+                state["deck_count"],
             )
             for player_index in get_active_players()
         ]
@@ -458,6 +459,10 @@ def advance_game_step(
             bot_states,
             log,
         )
+        add_log(
+            defender,
+            f"Player {defender} took cards: {card_list_tuples_to_strs(cards_to_hand)}",
+        )
         for card in cards_to_hand:
             hands[defender].append(card)
         print(f"actual hand: {hands[defender]}")
@@ -478,7 +483,7 @@ def advance_game_step(
                     bot_states,
                     log,
                 )
-                log[i].append("Player has WON!")
+                add_log(i, f"Player {i} has WON!")
         # Remove all players who have won from the round (but keep them in the state for UI)
         # Only active players participate in the round
         active_indices = [i for i, hand in enumerate(hands) if len(hand) > 0]
@@ -554,6 +559,7 @@ def advance_game_step(
                     table_defence.copy(),
                     [len(hand) for hand in hands],
                     defender,
+                    state["deck_count"],
                     bot_states[curr_player],
                 )
             except Exception as e:
@@ -694,6 +700,7 @@ def advance_game_step(
                 table_defence.copy(),
                 [len(hand) for hand in hands],
                 defender,
+                state["deck_count"],
                 bot_states[curr_player],
             )
         except Exception as e:
@@ -837,17 +844,45 @@ def advance_game_step(
         curr_defender = defender
         count_pops = 0
         # Deal to all players in cyclic order, starting from the attacker, skipping the defender.
+        params_list = get_params_list()
         for i in range(num_of_players):
-            player_index = (curr_attacker + i) % num_of_players
+            player_index: int = (curr_attacker + i) % num_of_players
             if player_index == curr_defender:
                 continue
+            drawn_cards = []
             for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[player_index]))):
-                hands[player_index].append(deck.pop(0))
+                drawn_cards.append(deck.pop(0))
                 count_pops += 1
+            hands[player_index].extend(drawn_cards)
+            if len(drawn_cards) > 0:
+                inform(
+                    bots[player_index],
+                    (Input_actions.TO_HAND, drawn_cards.copy()),
+                    params_list[player_index],
+                    bot_states[player_index],
+                )
+                add_log(
+                    player_index,
+                    f"Player {player_index} drew cards: {card_list_tuples_to_strs(drawn_cards)}",
+                )
         # Deal to defender last
+        drawn_cards = []
         for _ in range(min(len(deck), CARDS_PER_HAND - len(hands[curr_defender]))):
-            hands[curr_defender].append(deck.pop(0))
+            drawn_cards.append(deck.pop(0))
             count_pops += 1
+
+        hands[curr_defender].extend(drawn_cards)
+        if len(drawn_cards) > 0:
+            inform(
+                bots[curr_defender],
+                (Input_actions.TO_HAND, drawn_cards.copy()),
+                params_list[curr_defender],
+                bot_states[curr_defender],
+            )
+            add_log(
+                curr_defender,
+                f"Player {curr_defender} drew cards: {card_list_tuples_to_strs(drawn_cards)}",
+            )
         # Update deck in state
         print(f"Dealt {count_pops} cards from deck")
         state["deck"] = deck

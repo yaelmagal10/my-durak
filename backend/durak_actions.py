@@ -2,8 +2,8 @@ from enum import Enum
 
 
 class Input_actions(Enum):
-    OPTIONAL_ATTACK = 0  # attack with a card list, you may pass.
-    FIRST_ATTACK = 1  # attack with a card list, you must attack.
+    FIRST_ATTACK = 0  # attack with a card list, you may pass.
+    OPTIONAL_ATTACK = 1  # attack with a card list, you must attack.
     DEFENCE = 2  # defend with cards
 
     TO_HAND = 7  # info about the cards you took from deck to hand. Format: (Input_actions.TO_HAND, card_list)

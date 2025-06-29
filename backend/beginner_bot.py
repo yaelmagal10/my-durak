@@ -5,7 +5,13 @@ class BeginnerBot(AbstractBot):
     """A beginner bot that plays a simple strategy."""
 
     def game_init(
-        self, num_of_players: int, my_index: int, hand: list, kozar_card: tuple, first_player: int, lowest_kozar: int
+        self,
+        num_of_players: int,
+        my_index: int,
+        hand: list,
+        kozar_card: tuple,
+        first_player: int,
+        lowest_kozar: int,
     ):
         self.log("BeginnerBot: game_init called")
         ordered_suits = [0, 1, 2, 3]
@@ -45,10 +51,12 @@ class BeginnerBot(AbstractBot):
                 continue
             if card[0] == lowest_card[0]:
                 attacking_cards.append(card)
-        self.log(f"BeginnerBot: first_attack called, attacking_cards: {attacking_cards}")
+        self.log(
+            f"BeginnerBot: first_attack called, attacking_cards: {attacking_cards}"
+        )
         return attacking_cards
 
-    def defend(self):
+    def defence(self):
         if len(self.remove_Nones(self.get_table_defence())) == 0:
             defending_cards = []
             for card in self.get_hand():
