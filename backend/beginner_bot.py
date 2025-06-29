@@ -11,7 +11,8 @@ class BeginnerBot(AbstractBot):
         ordered_suits = [0, 1, 2, 3]
         ordered_suits[self.get_kozar_suit()] = 3
         ordered_suits[3] = self.get_kozar_suit()
-        self.card_order = [(i, suit) for suit in ordered_suits for i in range(13)]
+        self.card_order = [(i, suit) for i in range(13) for suit in ordered_suits]
+        self.log(f"BeginnerBot: card_order initialized: {self.card_order}")
 
     def remove_Nones(self, lst):
         """Remove None values from a list."""
@@ -92,6 +93,60 @@ class BeginnerBot(AbstractBot):
             if not success:
                 return [], []
         return defending_cards, indexes
+    
+    def notify_burn(self, card_list):
+        self.log(f"burn: {card_list}")
+
+    def notify_cards_drawn_to_hand(self, card_list):
+        self.log(f"cards drawn to hand: {card_list}")
+        for card in card_list:
+            if card not in self.get_hand():
+                self.log(f"Card {card} not in hand, something is wrong!")
+    
+    def notify_winner(self, winner_index):
+        self.log(f"Winner: {winner_index}")
+        if winner_index == self.get_my_index():
+            self.log("BeginnerBot: I won!")
+    
+    def notify_pass(self, player_index):
+        self.log(f"Player {player_index} passed")
+    
+    def notify_optional_attack(self, player_index, cards):
+        self.log(f"Player {player_index} optional attack with cards: {cards}")
+        for card in cards:
+            if card not in self.get_table_attack():
+                self.log(f"Card {card} not in table attack, something is wrong!")
+    
+    def notify_first_attack(self, player_index, cards):
+        self.log(f"Player {player_index} first attack with cards: {cards}")
+        for card in cards:
+            if card not in self.get_table_attack():
+                self.log(f"Card {card} not in table attack, something is wrong!")
+    
+    def notify_defence(self, player_index, defending_cards, indexes):
+        self.log(f"Player {player_index} defended with cards: {defending_cards} at indexes: {indexes}")
+        for card in defending_cards:
+            if card not in self.get_table_defence():
+                self.log(f"Card {card} not in table defence, something is wrong!")
+    
+    def notify_forward(self, forwarder_index, card_list):
+        try:
+            self.log(f"Player {forwarder_index} forwarded with cards: {card_list}")
+            for card in card_list:
+                if card not in self.get_table_attack():
+                    self.log(f"Card {card} not in table attack, something is wrong!")
+            if not all(card[0] == card_list[0][0] for card in self.get_table_attack() if card is not None):
+                self.log("Not all forwarded cards have the same number, something is wrong!")
+            if not all(card is None for card in self.get_table_defence()):
+                self.log("There are cards in table defence, something is wrong!")
+        except Exception as e:
+            self.log(f"Error in notify_forward: {e}")
+    
+    def notify_take(self, defender_index, card_list):
+        self.log(f"Player {defender_index} took cards: {card_list}")
+    
+    
+
 
 
 bot: BeginnerBot = BeginnerBot()
