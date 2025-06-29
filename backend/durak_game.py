@@ -583,8 +583,6 @@ def advance_game_step(
             end_of_round = True
             is_defence_successful = True
         else:
-            # Prepare arguments for defence
-            hand = hands[curr_player]
             # Find the first attack card that is not defended
             attack_card = None
             for i in range(len(table_attack)):
@@ -596,7 +594,7 @@ def advance_game_step(
                 result = call_bot(
                     bots[curr_player],
                     (Input_actions.DEFENCE,),
-                    hand.copy(),
+                    hands[curr_player].copy(),
                     table_attack.copy(),
                     table_defence.copy(),
                     [len(hand) for hand in hands],
@@ -729,8 +727,6 @@ def advance_game_step(
                 is_defence_successful = False
                 add_log(curr_player, f"Player {curr_player+1} took cards")
     else:  # If the current player is not the defender, they are attacking
-        # Prepare arguments for attack
-        hand = hands[curr_player]
         try:
             result = call_bot(
                 bots[curr_player],
@@ -741,7 +737,7 @@ def advance_game_step(
                         else Input_actions.OPTIONAL_ATTACK
                     ),
                 ),
-                hand.copy(),
+                hands[curr_player].copy(),
                 table_attack.copy(),
                 table_defence.copy(),
                 [len(hand) for hand in hands],

@@ -138,8 +138,6 @@ class AbstractBot(ABC):
         self.__dict__.update(state if state is not None else {})
         if not hasattr(self, "__events"):
             self.__events = []
-        # please do not hethet.
-        event = [elem.copy() if isinstance(elem,list) else elem for elem in event]
         self.__events.append(event)
         action = event[0] if event else None
         self.__hand = hand
