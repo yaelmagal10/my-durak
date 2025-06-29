@@ -73,7 +73,7 @@ class AbstractBot(ABC):
         pass
 
     @abstractmethod
-    def defend(self) -> Tuple[List[Tuple[int, int]], List[int]]:
+    def defence(self) -> Tuple[List[Tuple[int, int]], List[int]]:
         """Defend against an attack. Return a list of cards and list of indexes
         representing which attacking card each card is defending.
         To take, return an empty list of cards and an empty list of indexes.
@@ -102,9 +102,11 @@ class AbstractBot(ABC):
         return self.__table_defence
 
     def get_current_attacker(self) -> int:
+        """Get the index of the current attacker."""
         return self.__attacker
 
     def get_current_defender(self) -> int:
+        """Get the index of the current defender."""
         return self.__defender
 
     def get_my_index(self) -> int:
@@ -115,6 +117,10 @@ class AbstractBot(ABC):
         """Get the amount of cards in each hand."""
         return self.__cards_per_hand
 
+    def get_deck_count(self) -> int:
+        """Get the number of cards left in the deck."""
+        return self.__deck_count if hasattr(self, "__deck_count") else 0
+
     def get_raw_events(self) -> List[Tuple]:
         """Get all the raw events that the bot has received, by order."""
         return self.__events if hasattr(self, "__events") else []
@@ -124,6 +130,10 @@ class AbstractBot(ABC):
             ts = time()
             self.__logs.append(f"[TS:{ts}]{message}")
 
+    # Helpful for logging and debugging
+    RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
+    SUITS: List[str] = ["♣", "♦", "♥", "♠"]
+
     def call(
         self,
         event: Tuple,
@@ -132,6 +142,7 @@ class AbstractBot(ABC):
         table_defence: List,
         cards_per_hand: List[int],
         curr_defender: int,
+        deck_count: int,
         state: Dict[str, Any],
     ):
         # print(f"state given is: {state}")
@@ -145,6 +156,7 @@ class AbstractBot(ABC):
         self.__table_defence = table_defence
         self.__cards_per_hand = cards_per_hand
         self.__defender = curr_defender
+        self.__deck_count = deck_count
         self.__logs = []
         ret_dict = {}
         match action:
@@ -159,7 +171,7 @@ class AbstractBot(ABC):
                 cards = self.first_attack()
                 ret_dict["action"] = [Output_actions.ATTACK, cards]
             case Input_actions.DEFENCE:
-                cards, indexes = self.defend()
+                cards, indexes = self.defence()
                 if cards is None or len(cards) == 0:
                     ret_dict["action"] = [Output_actions.TAKE]
                 elif indexes is None or len(indexes) == 0:
