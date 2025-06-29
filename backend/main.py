@@ -202,7 +202,7 @@ def create_game_state(num_bots):
     hands = deal_players(deck, num_bots)
     # Find attacker: player with the lowest trump card (lowest rank of trump suit)
     lowest_trump = 20
-    attacker = 0
+    attacker = random.randint(0, num_bots - 1)
     trump_rank_order = RANKS
     for i, hand in enumerate(hands):
         trump_cards = [
