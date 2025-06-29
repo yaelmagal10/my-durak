@@ -436,9 +436,9 @@ def advance_game_step(
     def get_params_list():
         return [
             (
-                hands[player_index],
-                table_attack,
-                table_defence,
+                hands[player_index].copy(),
+                table_attack.copy(),
+                table_defence.copy(),
                 [len(hand) for hand in hands],
                 defender,
             )
@@ -544,8 +544,9 @@ def advance_game_step(
 
     # Helper to add a log entry for a specific bot
     def add_log(bot_idx, entry):
-        if 0 <= bot_idx < len(log):
-            log[bot_idx].append(entry)
+        if 0 <= bot_idx < len(log) and isinstance(entry, str):
+            ts = time()
+            log[bot_idx].append(f"[TS:{ts}]{entry}")
 
     def add_logs(bot_idx, entries):
         if 0 <= bot_idx < len(log):
@@ -582,8 +583,6 @@ def advance_game_step(
             end_of_round = True
             is_defence_successful = True
         else:
-            # Prepare arguments for defence
-            hand = hands[curr_player]
             # Find the first attack card that is not defended
             attack_card = None
             for i in range(len(table_attack)):
@@ -595,9 +594,9 @@ def advance_game_step(
                 result = call_bot(
                     bots[curr_player],
                     (Input_actions.DEFENCE,),
-                    hand,
-                    table_attack,
-                    table_defence,
+                    hands[curr_player].copy(),
+                    table_attack.copy(),
+                    table_defence.copy(),
                     [len(hand) for hand in hands],
                     defender,
                     bot_states[curr_player],
@@ -728,8 +727,6 @@ def advance_game_step(
                 is_defence_successful = False
                 add_log(curr_player, f"Player {curr_player} took cards")
     else:  # If the current player is not the defender, they are attacking
-        # Prepare arguments for attack
-        hand = hands[curr_player]
         try:
             result = call_bot(
                 bots[curr_player],
@@ -740,9 +737,9 @@ def advance_game_step(
                         else Input_actions.OPTIONAL_ATTACK
                     ),
                 ),
-                hand,
-                table_attack,
-                table_defence,
+                hands[curr_player].copy(),
+                table_attack.copy(),
+                table_defence.copy(),
                 [len(hand) for hand in hands],
                 defender,
                 bot_states[curr_player],
