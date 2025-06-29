@@ -238,7 +238,7 @@ function BotManagerPage({ onStartGame, bots, setBots, selectedBots, setSelectedB
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                         {playerOrder.map((filename, idx) => (
                             <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
-                                <span style={{ color: '#888', marginRight: 10 }}>#{idx + 1}</span>
+                                <span style={{ color: '#888', marginRight: 10 }}>#{idx}</span>
                                 <select
                                     value={filename}
                                     onChange={e => handlePlayerOrderChange(idx, e.target.value)}
@@ -502,7 +502,7 @@ function GamePage({ onBack, selectedBots }) {
                     letterSpacing: 2,
                     textShadow: "0 2px 12px #fca5a5"
                 }}>
-                    LOSER: Player {loser + 1} {bots[loser] ? `(${bots[loser]})` : ""}
+                    LOSER: Player {loser} {bots[loser] ? `(${bots[loser]})` : ""}
                 </div>
                 <div style={{
                     fontSize: 28,
@@ -516,7 +516,7 @@ function GamePage({ onBack, selectedBots }) {
                 <ul style={{ fontSize: 22, color: "#2563eb", fontWeight: 600, marginBottom: 32 }}>
                     {winners.map(idx => (
                         <li key={idx}>
-                            Player {idx + 1} {bots[idx] ? `(${bots[idx]})` : ""}
+                            Player {idx} {bots[idx] ? `(${bots[idx]})` : ""}
                         </li>
                     ))}
                 </ul>
@@ -542,7 +542,7 @@ function GamePage({ onBack, selectedBots }) {
                             ? gameState.state.log.map((botLog, idx) => (
                                 <div key={idx} style={{ marginBottom: 10 }}>
                                     <div style={{ color: "#6366f1", fontWeight: 600, fontSize: 16, marginBottom: 2 }}>
-                                        Player {idx + 1} {bots && bots[idx] ? `(${bots[idx]})` : ""}
+                                        Player {idx} {bots && bots[idx] ? `(${bots[idx]})` : ""}
                                     </div>
                                     {botLog && botLog.length > 0
                                         ? botLog.map((entry, eidx) => (

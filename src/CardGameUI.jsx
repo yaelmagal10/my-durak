@@ -63,7 +63,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                 botLog.forEach((entry, eidx) => {
                     entries.push({
                         player: idx,
-                        bot: bots && bots[idx] ? bots[idx] : `Player ${idx + 1}`,
+                        bot: bots && bots[idx] ? bots[idx] : `Player ${idx}`,
                         text: entry,
                         order: eidx,
                         logIndex: entries.length, // fallback order
@@ -82,7 +82,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                 if (log[j] && log[j][i] !== undefined) {
                     merged.push({
                         player: j,
-                        bot: bots && bots[j] ? bots[j] : `Player ${j + 1}`,
+                        bot: bots && bots[j] ? bots[j] : `Player ${j}`,
                         text: log[j][i],
                         order: i,
                         logIndex: merged.length,
@@ -182,7 +182,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                                     letterSpacing: 0.5,
                                                 }}
                                             >
-                                                {`Player ${idx + 1} (${bots && bots[idx] ? bots[idx] : "?"})`}
+                                                {`Player ${idx} (${bots && bots[idx] ? bots[idx] : "?"})`}
                                                 {attacker === idx && (
                                                     <span style={{ color: "#f59e42", marginLeft: 6, fontWeight: 700 }}>
                                                         (Attacker)
@@ -432,7 +432,7 @@ export default function CardGameUI({ hands, table_attack, table_defence, log, at
                                         }}
                                     >
                                         <div style={{ color: "#6366f1", fontWeight: 600, fontSize: compact ? 12 : 15, marginBottom: 4 }}>
-                                            Player {idx + 1} {bots && bots[idx] ? `(${bots[idx]})` : ""}
+                                            Player {idx} {bots && bots[idx] ? `(${bots[idx]})` : ""}
                                         </div>
                                         {botLog && botLog.length > 0
                                             ? botLog.slice().reverse().map((entry, eidx) => (

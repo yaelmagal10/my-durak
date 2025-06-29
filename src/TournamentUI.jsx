@@ -107,7 +107,7 @@ function TournamentUI({ bots, onBack }) {
                     <h3>Results</h3>
                     <ul>
                         {results.loser_count_lst && results.loser_count_lst.map((count, i) => (
-                            <li key={i}>{bots[selectedBots[i]] ? bots[selectedBots[i]].name : `Bot ${i + 1}`}:    {count} losses</li>
+                            <li key={i}>{bots[selectedBots[i]] ? bots[selectedBots[i]].name : `Bot ${i}`}:    {count} losses</li>
                         ))}
                     </ul>
                     <div>Total games: {results.total_games}</div>

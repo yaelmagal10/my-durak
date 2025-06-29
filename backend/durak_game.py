@@ -383,7 +383,7 @@ def advance_game_step(
     ##--------------------------##
 
     if bot_names is None:
-        bot_names = [f"Bot {i+1}" for i in range(len(bots))]
+        bot_names = [f"Bot {i}" for i in range(len(bots))]
     num_of_players = len(bots)
     num_of_burned_cards = state["num_of_burned_cards"]
     attacker = state["attacker"]
@@ -577,7 +577,7 @@ def advance_game_step(
             state["burn"] = True
             add_log(
                 defender,
-                f"Player {defender+1} burned cards: {card_list_tuples_to_strs(burned_cards)}",
+                f"Player {defender} burned cards: {card_list_tuples_to_strs(burned_cards)}",
             )
             end_of_round = True
             is_defence_successful = True
@@ -649,14 +649,14 @@ def advance_game_step(
                         )
                         add_log(
                             curr_player,
-                            f"Player {curr_player+1} defended with {card_list_tuples_to_strs(successful_defending_cards)}",
+                            f"Player {curr_player} defended with {card_list_tuples_to_strs(successful_defending_cards)}",
                         )
                     else:
                         take()
                         end_of_round = True
                         is_defence_successful = False
 
-                        add_log(curr_player, f"Player {curr_player+1} took cards")
+                        add_log(curr_player, f"Player {curr_player} took cards")
                 elif action[0] == Output_actions.FORWARD:
                     num_of_allowed_forwarding_cards = len(
                         hands[get_next_player(defender)]
@@ -670,7 +670,7 @@ def advance_game_step(
                         take()
                         end_of_round = True
                         is_defence_successful = False
-                        add_log(defender, f"Player {defender+1} took cards")
+                        add_log(defender, f"Player {defender} took cards")
                     else:
                         forwarding_card_list = action[1]
                         successful_forwarding_card_list = forward_with_card_list(
@@ -694,7 +694,7 @@ def advance_game_step(
                             )
                             add_log(
                                 defender,
-                                f"Player {defender+1} forwarded cards {card_list_tuples_to_strs(successful_forwarding_card_list)}",
+                                f"Player {defender} forwarded cards {card_list_tuples_to_strs(successful_forwarding_card_list)}",
                             )
                             defender = get_next_player(defender)
                             # curr_player = (
@@ -714,19 +714,19 @@ def advance_game_step(
                             take()
                             end_of_round = True
                             is_defence_successful = False
-                            add_log(defender, f"Player {defender+1} took cards")
+                            add_log(defender, f"Player {defender} took cards")
                 else:
                     take()
                     end_of_round = True
                     is_defence_successful = False
-                    add_log(curr_player, f"Player {curr_player+1} took cards")
+                    add_log(curr_player, f"Player {curr_player} took cards")
 
             else:
                 print(f"line {currentframe().f_lineno}: invalid defence action")
                 take()
                 end_of_round = True
                 is_defence_successful = False
-                add_log(curr_player, f"Player {curr_player+1} took cards")
+                add_log(curr_player, f"Player {curr_player} took cards")
     else:  # If the current player is not the defender, they are attacking
         # Prepare arguments for attack
         hand = hands[curr_player]
@@ -770,7 +770,7 @@ def advance_game_step(
         print("660")
         if all(card is None for card in table_attack):
             print(
-                f"line {currentframe().f_lineno}: First attack, player {curr_player+1} must attack with at least 1 card"
+                f"line {currentframe().f_lineno}: First attack, player {curr_player} must attack with at least 1 card"
             )
             if valid_action_format(action) and action[0] == Output_actions.ATTACK:
                 successful_attacking_cards = attack_with_card_list(
@@ -798,7 +798,7 @@ def advance_game_step(
                 )
                 add_log(
                     curr_player,
-                    f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
+                    f"Player {curr_player} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
                 )
             if not is_succesful_attack:
                 print("line 678: invalid first attack action")
@@ -828,14 +828,14 @@ def advance_game_step(
                     )
                     add_log(
                         curr_player,
-                        f"Player {curr_player+1} attacked with {card_list_tuples_to_strs([random_card])} (forced random)",
+                        f"Player {curr_player} attacked with {card_list_tuples_to_strs([random_card])} (forced random)",
                     )
                 else:
                     print(
                         f"line {currentframe().f_lineno}: No cards to attack with in the first attack"
                     )
                     raise ValueError(
-                        f"Player {curr_player+1} has no cards to attack with in the first attack"
+                        f"Player {curr_player} has no cards to attack with in the first attack"
                     )
 
         # The regular attack case: player can attack with 0 or more cards.
@@ -861,7 +861,7 @@ def advance_game_step(
                 )
                 add_log(
                     curr_player,
-                    f"Player {curr_player+1} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
+                    f"Player {curr_player} attacked with {card_list_tuples_to_strs(successful_attacking_cards)}",
                 )
             else:
                 inform_all(
@@ -872,9 +872,9 @@ def advance_game_step(
                     bot_states,
                     log,
                 )
-                add_log(curr_player, f"Player {curr_player+1} passes")
+                add_log(curr_player, f"Player {curr_player} passes")
                 print(
-                    f"line {currentframe().f_lineno}: regular attack for player {curr_player+1} has failed, passing turn"
+                    f"line {currentframe().f_lineno}: regular attack for player {curr_player} has failed, passing turn"
                 )
     # --- Deal cards to players after round ends ---
     if end_of_round:

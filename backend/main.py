@@ -316,7 +316,7 @@ def main(to_print: bool = False, randomize_order: bool = False):
             bot_name = fname.split("_", 1)[-1].replace(".pyc", "").replace(".py", "")
         bot_names.append(bot_name)
 
-    bot_names = [f"Player {i+1}: {bot_names[i]}" for i in range(len(bot_names))]
+    bot_names = [f"Player {i}: {bot_names[i]}" for i in range(len(bot_names))]
 
     state = create_game_state(len(bot_filenames))
 
@@ -408,7 +408,7 @@ def tournament(num_of_games=10, to_print=False):
         game_idx += 1
     print("\n=== Tournament Results ===")
     for i, count in enumerate(loser_count_lst):
-        print(f"Player {i + 1} lost {count} times.")
+        print(f"Player {i} lost {count} times.")
     num_of_infinite_games = game_idx - count_proper_games
     print(f"\n{num_of_infinite_games} games got caught in an infinite loop.")
 
