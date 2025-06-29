@@ -80,27 +80,6 @@ def call_bot(bot, *args, timeout: float = MAX_TIME_PER_TURN, **kwargs):
         return None
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
-    # TODO: Implement timeout handling
-    # I'm working on a multiprocessing solution to handle timeouts, It will change a lot, so I'm pushing it like this for now
-    # reduction.ForkingPickler = Pickler
-    # q = Queue()
-    # p = Process(target=__call_bot_subprocess, args=(q, bot, args, kwargs))
-    # p.start()
-    # p.join(timeout)
-
-    # if p.is_alive():
-    #     p.terminate()
-    #     p.join()
-    #     raise TimeoutError("Bot call timed out")
-
-    # if not q.empty():
-    #     status, value = q.get()
-    #     if status == "ok":
-    #         return value
-    #     else:
-    #         raise value
-
-    # return None # bot stopped the process completely
 
 
 def inform(player_bot: Any, message: Any, params: Tuple, state: Any) -> Any:
@@ -181,9 +160,8 @@ def valid_action_format(action: Any) -> bool:
             print(113, "Invalid attack action length")
             return False
         card_list = action[1]
-        b = valid_card_list_format(card_list)
-        print(b)
-        return b
+        return valid_card_list_format(card_list)
+
     if action_kind == Output_actions.DEFEND:
         if len(action) != 3:
             return False
@@ -227,9 +205,7 @@ def real_cards(card_list: List[Optional[Tuple[int, int]]]) -> List[Tuple[int, in
 def attack_vector(
     attack: List[Optional[Tuple[int, int]]], defence: List[Optional[Tuple[int, int]]]
 ) -> set:
-    # print(f"line 125: attack is {attack}, defence is {defence}")
     if attack[0] is None:  # New attack
-        # print("New attack, returning full attack vector")
         return set(range(13))
     return set(card[0] for card in attack + defence if card is not None)
 
@@ -375,7 +351,6 @@ def make_table_size_of_max_attack_size(
 def advance_game_step(
     state: Dict[str, Any], bots: List[Any], bot_names: Optional[List[str]] = None
 ) -> Dict[str, Any]:
-    # pretty_print_state(state)
 
     ##-----BAD CONFIGURATIONS---##
     # state["deck"] = []  # state["deck"][-3:]
@@ -475,7 +450,6 @@ def advance_game_step(
     def take() -> None:
         cards_to_hand = real_cards(table_attack + table_defence)
         print(f"real cards = {cards_to_hand}")
-        # inform(player_list[player_index], (Input_actions.TO_HAND, tuple(cards_to_hand)))
         inform_all(
             bots,
             get_active_players(),
@@ -511,22 +485,6 @@ def advance_game_step(
         if not active_indices:
             return
 
-        # Update attacker, defender, curr_player to next active if needed
-        # def next_active(idx):
-        #     for offset in range(1, len(hands) + 1):
-        #         ni = (idx + offset) % len(hands)
-        #         if len(hands[ni]) > 0:
-        #             return ni
-        #     return idx
-
-        # if len(hands[attacker]) == 0:
-        #     attacker = next_active(attacker)
-        # if len(hands[defender]) == 0 or defender == attacker:
-        #     defender = next_active(attacker)
-        # if len(hands[curr_player]) == 0:
-        #     curr_player = next_active(curr_player)
-        # # If only one player left, game is over (handled by frontend/end condition)
-
         def closest_active(idx):
             for offset in range(len(hands) + 1):
                 ni = (idx + offset) % len(hands)
@@ -534,9 +492,6 @@ def advance_game_step(
                     return ni
             return idx
 
-        # assert attacker == next_active(attacker)
-        # assert defender == next_active(defender)
-        # assert curr_player == next_active(curr_player)
         attacker = closest_active(attacker)
         defender = closest_active(defender)
         curr_player = closest_active(curr_player)
@@ -696,9 +651,6 @@ def advance_game_step(
                                 f"Player {defender} forwarded cards {card_list_tuples_to_strs(successful_forwarding_card_list)}",
                             )
                             defender = get_next_player(defender)
-                            # curr_player = (
-                            #     defender - 1
-                            # ) % num_of_players  # because defender is now the next player (current player will be incremented at the end of this function)
                             allowed_attack_length = len(hands[defender])
                             assert (
                                 len(table_attack) <= allowed_attack_length
