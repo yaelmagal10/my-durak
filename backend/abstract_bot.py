@@ -87,11 +87,11 @@ class AbstractBot(ABC):
 
     def get_kozar_suit(self) -> int:
         """Get the suit of the kozar card."""
-        return self.__kozar_card[1] if self.__kozar_card else -1
+        return self.__kozar_card[1]
 
     def get_kozar_card(self) -> Tuple[int, int]:
         """Get the kozar card."""
-        return self.__kozar_card if self.__kozar_card else (-1, -1)
+        return self.__kozar_card
 
     def get_table_attack(self) -> List[Tuple[int, int]]:
         """Get the current attacking cards on the table."""
@@ -111,7 +111,7 @@ class AbstractBot(ABC):
 
     def get_my_index(self) -> int:
         """Get the index of the bot in the game."""
-        return self.__my_index if hasattr(self, "__my_index") else -1
+        return self.__my_index
 
     def get_num_cards_per_hand(self) -> List[int]:
         """Get the amount of cards in each hand."""
@@ -119,16 +119,16 @@ class AbstractBot(ABC):
 
     def get_deck_count(self) -> int:
         """Get the number of cards left in the deck."""
-        return self.__deck_count if hasattr(self, "__deck_count") else 0
+        return self.__deck_count
 
     def get_raw_events(self) -> List[Tuple]:
         """Get all the raw events that the bot has received, by order."""
-        return self.__events if hasattr(self, "__events") else []
+        return self.__events
 
     def log(self, message: str):
         if isinstance(message, str):
             ts = time()
-            self.__logs.append(f"[TS:{ts}]{message}")
+            self.__logs.append(f"[TS:{ts}]Bot {self.__my_index}: {message}")
 
     # Helpful for logging and debugging
     RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -145,12 +145,13 @@ class AbstractBot(ABC):
         deck_count: int,
         state: Dict[str, Any],
     ):
+        print(f"Event received: {event}")
         # print(f"state given is: {state}")
         self.__dict__.update(state if state is not None else {})
-        if not hasattr(self, "__events"):
+        if not hasattr(self, "_AbstractBot__events"):
             self.__events = []
         self.__events.append(event)
-        action = event[0] if event else None
+        action = event[0]
         self.__hand = hand
         self.__table_attack = table_attack
         self.__table_defence = table_defence
@@ -197,6 +198,7 @@ class AbstractBot(ABC):
                 self.notify_cards_drawn_to_hand(event[1])
             case Input_actions.GAME_INIT:
                 self.__my_index = event[2]
+                self.log(f"Game initialized for player index {self.__my_index}")
                 self.__hand = event[3]
                 self.__kozar_card = event[4]
                 self.__attacker = event[5]
