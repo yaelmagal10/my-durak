@@ -62,6 +62,8 @@ class BeginnerBot(AbstractBot):
         defending_cards = []
         indexes = []
         table_defence = self.get_table_defence()
+        self.log(f"numbers_by_suit: {numbers_by_suit}")
+        self.log(f"hand: {self.get_hand()}")
         for i, card in sorted(
             enumerate(self.get_table_attack()),
             key=lambda x: self.card_order.index(x[1]) if x[1] is not None else 53,
@@ -77,7 +79,7 @@ class BeginnerBot(AbstractBot):
                     numbers_by_suit[card[1]].remove(number)
                     break
             if not success:
-                if len(numbers_by_suit[self.get_kozar_suit()]) > 0:
+                if len(numbers_by_suit[self.get_kozar_suit()]) > 0 and card[1] != self.get_kozar_suit():
                     defending_cards.append(
                         (
                             numbers_by_suit[self.get_kozar_suit()][0],
