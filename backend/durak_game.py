@@ -2,9 +2,7 @@ from random import shuffle, choice
 from durak_actions import Output_actions, Input_actions
 from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
-from multiprocessing import Queue, Process, reduction
-from dill import Pickler  # Dependecy
-from time import time, sleep
+from time import time
 import signal
 
 CARDS_PER_HAND: int = 6
@@ -103,8 +101,8 @@ def inform_all(
     states: List[Any],
     log: List[List[str]],
 ) -> None:
-    for bot_index, params, state in zip(index_list, params_list, states):
-        result = inform(bots[bot_index], message, params, state)
+    for bot_index, params in zip(index_list, params_list):
+        result = inform(bots[bot_index], message, params, states[bot_index])
         if isinstance(result, dict):
             if "state" in result:
                 states[bot_index] = result["state"]
@@ -506,7 +504,7 @@ def advance_game_step(
     def add_log(bot_idx, entry):
         if 0 <= bot_idx < len(log) and isinstance(entry, str):
             ts = time()
-            log[bot_idx].append(f"[TS:{ts}]{entry}")
+            log[bot_idx].append(f"[TS:{ts}]Game: {entry}")
 
     def add_logs(bot_idx, entries):
         if 0 <= bot_idx < len(log):

@@ -97,13 +97,17 @@ def load_bot(filepath):
         raise ImportError(f"Unsupported file type for bot file: {filepath}")
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not load spec for bot file: {filepath}")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    # Try to get 'bot' instance, else fallback to module
-    bot_instance = getattr(module, "bot", module)
-    # print("dict(bot_instance)", (bot_instance).__dict__)
-    return bot_instance
+    try:
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        # Try to get 'bot' instance, else fallback to module
+        bot_instance = getattr(module, "bot", module)
+        return bot_instance
+    except Exception as e:
+        print(f"[ERROR] Failed to load bot from {filepath}: {e}")
+        traceback.print_exc()
+        return None
 
 
 @app.get("/api/bots", response_model=List[BotInfo])
