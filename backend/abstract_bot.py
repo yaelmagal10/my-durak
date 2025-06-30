@@ -145,8 +145,6 @@ class AbstractBot(ABC):
         deck_count: int,
         state: Dict[str, Any],
     ):
-        print(f"Event received: {event}")
-        # print(f"state given is: {state}")
         self.__dict__.update(state if state is not None else {})
         if not hasattr(self, "_AbstractBot__events"):
             self.__events = []
@@ -198,7 +196,6 @@ class AbstractBot(ABC):
                 self.notify_cards_drawn_to_hand(event[1])
             case Input_actions.GAME_INIT:
                 self.__my_index = event[2]
-                self.log(f"Game initialized for player index {self.__my_index}")
                 self.__hand = event[3]
                 self.__kozar_card = event[4]
                 self.__attacker = event[5]
