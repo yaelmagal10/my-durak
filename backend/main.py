@@ -23,16 +23,13 @@ from fastapi import status as fastapi_status
 from typing import List
 from pydantic import BaseModel
 import random
-from durak_game import (
-    advance_game_step,
+from configurations import (
     SUITS,
     RANKS,
-    pretty_print_state,
-    card_tuple_to_str,
-    card_str_to_tuple,
     CARDS_PER_HAND,
+    USE_FIXED_DECK,
 )
-from const_decks import DECK1
+from durak_game import pretty_print_state, card_str_to_tuple, advance_game_step
 
 app = FastAPI()
 app.add_middleware(
@@ -185,8 +182,7 @@ def delete_bot(filename: str):
 
 def create_game_state(num_bots):
     deck = shuffle(create_deck())
-    is_fixed_deck = False
-    if is_fixed_deck:
+    if USE_FIXED_DECK:
         with open("deck.txt","r") as f:
             deck_str = f.read()
         deck = [tuple([int(x) for x in s.split(",")]) for s in deck_str.split()]

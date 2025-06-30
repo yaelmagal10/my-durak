@@ -1,17 +1,10 @@
-from random import shuffle, choice
 from durak_actions import Output_actions, Input_actions
+from configurations import *
+from random import shuffle, choice
 from typing import List, Tuple, Optional, Any, Dict
 from inspect import currentframe
 from time import time
 import signal
-
-CARDS_PER_HAND: int = 6
-STARTING_MAX_ATTACK_SIZE: int = 5
-MAX_ATTACK_SIZE_AFTER_BURN: int = 6
-MAX_TIME_PER_TURN: float = 0.01
-RANKS: List[str] = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-SUITS: List[str] = ["♣", "♦", "♥", "♠"]
-USE_TIMING: bool = False
 
 
 def pretty_print_state(state):
