@@ -185,17 +185,13 @@ def delete_bot(filename: str):
 
 def create_game_state(num_bots):
     deck = shuffle(create_deck())
-    # print("Currently using a fixed deck (DECK1) for testing")
-    # deck = DECK1
     is_fixed_deck = False
     if is_fixed_deck:
-        #deck_str = "3,0 11,0 7,3 6,3 4,1 2,0 8,3 9,1 0,3 6,0 5,2 4,3 7,1 12,2 12,0 0,0 10,1 8,2 9,2 8,0 10,3 5,1 4,0 9,3 6,1 10,0 6,2 2,1 0,1 11,2 5,0 3,3 10,2 2,3 5,3 1,1 7,0 4,2 1,0 2,2 0,2 11,3 11,1 1,3 3,1 12,3 1,2 12,1 7,2 9,0 3,2 8,1"
         with open("deck.txt","r") as f:
             deck_str = f.read()
         deck = [tuple([int(x) for x in s.split(",")]) for s in deck_str.split()]
         deck = [{"rank": RANKS[c[0]], "suit": SUITS[c[1]]} for c in deck]
 
-    print(deck)
     with open("deck.txt", "w") as file:
         for c in deck:
             r, s = card_str_to_tuple(f"{c['rank']}{c['suit']}")
@@ -335,10 +331,7 @@ def main(to_print: bool = False, randomize_order: bool = False):
 
     step = 0
     while True:
-        print(f"\n--- Step {step} ---")
-
         if to_print:
-
             print(f"\n--- Step {step} ---")
             print(
                 f"Attacker: {bot_names[state['attacker']]} | Defender: {bot_names[state['defender']]}"
@@ -359,25 +352,27 @@ def main(to_print: bool = False, randomize_order: bool = False):
             if len(h) > 0 or len(state["deck"]) > 0
         ]
         if len(alive) <= 1 or step >= MAX_NUM_OF_STEPS:
-            print("\n=== GAME OVER ===")
+            if to_print:
+                print("\n=== GAME OVER ===")
             # Print all winners
             if step == MAX_NUM_OF_STEPS:
-                print("Game ended due to reaching max steps.\nNo one loses.")
+                if to_print:
+                    print("Game ended due to reaching max steps.\nNo one loses.")
                 return -1  # Indicate game ended without a loser
             else:
                 max_steps_achieved = max(max_steps_achieved, step)
                 for idx, h in enumerate(state["hands"]):
                     if len(h) == 0:
-                        print(f"WINNER: {bot_names[idx]}")
+                        if to_print:
+                            print(f"WINNER: {bot_names[idx]}")
                 # Print the loser (the only one with cards left)
                 if len(alive) == 1:
-                    print(f"\nLOSER: {bot_names[alive[0]]}")
+                    if to_print:
+                        print(f"\nLOSER: {bot_names[alive[0]]}")
                     return alive[0]  # Return the index of the loser
         # Advance game step
         state = advance_game_step(state, bots, bot_names)
         step += 1
-        # print(args.delay)
-        # time.sleep(args.delay)
 
 
 def tournament(num_of_games=10, to_print=False):
@@ -394,12 +389,6 @@ def tournament(num_of_games=10, to_print=False):
         bot_filenames = bot_filenames_orig[:]
         random.shuffle(bot_filenames)
         sys.argv = ["main.py"] + bot_filenames
-        # Redirect stdout to avoid inner printing, # but still allow outer prints
-        # sys.stdout = open(os.devnull, "w")
-        # try:
-        #     loser = main(to_print=False)
-        # except:
-        #     loser = -1
         loser = main(to_print=False)
         # `sys.stdout = sys.__stdout__
         if loser != -1:
